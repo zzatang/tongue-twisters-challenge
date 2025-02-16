@@ -1,0 +1,54 @@
+# .windsurfrules
+
+## Project Overview
+
+*   **Type:** windsurf_file
+*   **Description:** I want to build a web-based platform for people with speech impediments to improve their speech by practicing various tongue twisters. The application listens to users as they recite tongue twisters and provides immediate feedback on pronunciation accuracy along with actionable tips for improvement.
+*   **Primary Goal:** Secure user accounts, present a dashboard with categorized tongue twister tiles and filtering options, implement real-time speech analysis using Google Speech-to-Text API, and integrate gamification elements to motivate continuous practice.
+
+## Project Structure
+
+### Framework-Specific Routing
+
+*   **Directory Rules:**
+
+    *   Next.js 14: Enforce App Router conventions using the `app/[route]/page.tsx` structure.
+    *   Example 1: "Next.js 14 (App Router)" → `app/[route]/page.tsx` conventions
+    *   Example 2: "Next.js (Pages Router)" → `pages/[route].tsx` pattern
+    *   Example 3: "React Router 6" → `src/routes/` with `createBrowserRouter`
+
+### Core Directories
+
+*   **Versioned Structure:**
+
+    *   app/api: Next.js 14 API routes implemented with Route Handlers for backend functionality
+    *   app/dashboard: Next.js 14 directory for dashboard layouts and components handling user progress and gamification display
+
+### Key Files
+
+*   **Stack-Versioned Patterns:**
+
+    *   app/dashboard/layout.tsx: Implements the root layout for the dashboard in Next.js 14
+    *   pages/_app.js: Applicable for Next.js Pages Router customization (not used in App Router projects)
+
+## Tech Stack Rules
+
+*   **Version Enforcement:**
+
+    *   next@14: App Router required; usage of server actions is enforced and legacy methods like `getInitialProps` are disallowed
+
+## PRD Compliance
+
+*   **Non-Negotiable:**
+
+    *   "Tongue Twisters Challenge is a web-based platform designed to help children with speech impediments improve their articulation by practicing fun and engaging tongue twisters. The platform uses Google’s Speech-to-Text API for real-time speech analysis, secure user authentication via Clerk, and progress tracking via Supabase." → The project must adhere to Next.js 14 conventions with the integrated tech stack and specified real-time feedback requirements.
+
+## App Flow Integration
+
+*   **Stack-Aligned Flow:**
+
+    *   Example: "Next.js 14 Auth Flow → `app/auth/login/page.tsx` uses server actions for secure authentication, aligning with the integration of Clerk for user login."
+
+## Middleware.ts
+
+*   Rule for Middleware.ts - Do Not modify middleware.ts file. If there are any issues with Clert, go to <https://clerk.com/docs/quickstarts/nextjs> and <https://clerk.com/docs/quickstarts/nextjs-pages-router> to read the instructions
