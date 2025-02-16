@@ -1,19 +1,49 @@
+/* Import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Parkinsans:wght@300..800&display=swap');
 
+/* Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-.logo-text {
-  font-family: Parkinsans, sans-serif;
+/* Custom component styles */
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-md transition-colors;
+  }
+
+  .card-base {
+    @apply p-6 bg-card text-card-foreground rounded-lg shadow-sm;
+  }
+
+  .input-base {
+    @apply px-3 py-2 bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring;
+  }
 }
 
+/* Custom utility styles */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+  
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary to-primary/80;
+  }
 }
 
+/* Base styles */
+.logo-text {
+  font-family: Parkinsans, sans-serif;
+}
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -50,6 +80,7 @@
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -84,12 +115,11 @@
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
