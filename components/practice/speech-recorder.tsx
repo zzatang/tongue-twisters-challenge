@@ -8,7 +8,7 @@ interface SpeechRecorderProps {
   onRecordingComplete: (audioBlob: Blob) => void;
 }
 
-export function SpeechRecorder({ onRecordingComplete }: SpeechRecorderProps) {
+export const SpeechRecorder = ({ onRecordingComplete }: SpeechRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);

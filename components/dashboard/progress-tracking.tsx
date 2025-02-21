@@ -24,7 +24,7 @@ interface ProgressTrackingProps {
   metrics: ProgressMetrics;
 }
 
-export function ProgressTracking({ metrics }: ProgressTrackingProps) {
+export const ProgressTracking = ({ metrics }: ProgressTrackingProps) => {
   const {
     practiceStreak,
     totalPracticeTime,

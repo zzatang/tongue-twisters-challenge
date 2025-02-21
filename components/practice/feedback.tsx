@@ -17,7 +17,7 @@ interface FeedbackProps {
   } | null;
 }
 
-export function Feedback({ isLoading, feedback }: FeedbackProps) {
+export const Feedback = ({ isLoading, feedback }: FeedbackProps) => {
   if (isLoading) {
     return (
       <Card>
