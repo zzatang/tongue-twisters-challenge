@@ -1,149 +1,116 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import { DifficultyFilter } from "@/components/dashboard/difficulty-filter";
 import { TongueTwisterTile } from "@/components/dashboard/tongue-twister-tile";
 import { ProgressTracking } from "@/components/dashboard/progress-tracking";
+import { getTongueTwisters, getUserProgress } from "@/lib/supabase/api";
+import { TongueTwister, UserProgress } from "@/lib/supabase/types";
+import { generateTitle } from "@/lib/utils/text";
 
-// Sample data - This would come from your Supabase database in production
-const tongueTwisters = [
-  {
-    id: 1,
-    title: "Peter Piper",
-    text: "Peter Piper picked a peck of pickled peppers. A peck of pickled peppers Peter Piper picked.",
-    difficulty: "Easy",
-  },
-  {
-    id: 2,
-    title: "She Sells Seashells",
-    text: "She sells seashells by the seashore. The shells she sells are surely seashells.",
-    difficulty: "Easy",
-  },
-  {
-    id: 3,
-    title: "Fuzzy Wuzzy",
-    text: "Fuzzy Wuzzy was a bear. Fuzzy Wuzzy had no hair. Fuzzy Wuzzy wasn't fuzzy, was he?",
-    difficulty: "Intermediate",
-  },
-  {
-    id: 4,
-    title: "Unique New York",
-    text: "Unique New York. You know you need unique New York.",
-    difficulty: "Intermediate",
-  },
-  {
-    id: 5,
-    title: "Six Slick Slim Slick Slabs",
-    text: "Six slick slim slick slabs split.",
-    difficulty: "Advanced",
-  },
-] as const;
-
-// Sample progress data - This would come from your Supabase database in production
-const sampleProgressData = {
-  practiceStreak: 5,
-  totalPracticeTime: 120, // in minutes
-  averageClarityScore: 85,
-  practiceFrequency: {
-    thisWeek: 12,
-    lastWeek: 8,
-  },
-  badges: [
-    {
-      id: "streak-3",
-      name: "3-Day Streak",
-      description: "Practice for 3 days in a row",
-      earned: true,
-    },
-    {
-      id: "clarity-80",
-      name: "Clear Speaker",
-      description: "Achieve 80% clarity score",
-      earned: true,
-    },
-    {
-      id: "practice-10",
-      name: "Dedicated Learner",
-      description: "Complete 10 practice sessions",
-      earned: true,
-    },
-    {
-      id: "advanced-5",
-      name: "Advanced Master",
-      description: "Master 5 advanced tongue twisters",
-      earned: false,
-    },
-    {
-      id: "perfect-100",
-      name: "Perfect Score",
-      description: "Achieve 100% clarity score",
-      earned: false,
-    },
-    {
-      id: "streak-7",
-      name: "Weekly Warrior",
-      description: "Practice for 7 days in a row",
-      earned: false,
-    },
-  ],
-};
+type Difficulty = 'Easy' | 'Intermediate' | 'Advanced' | 'All';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
+  const { user } = useUser();
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("All");
+  const [tongueTwisters, setTongueTwisters] = useState<TongueTwister[]>([]);
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredTwisters = tongueTwisters.filter(
-    (twister) =>
-      selectedDifficulties.length === 0 ||
-      selectedDifficulties.includes(twister.difficulty)
+  useEffect(() => {
+    async function fetchData() {
+      if (!user) return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Fetch tongue twisters and user progress in parallel
+        const [twistersData, progressData] = await Promise.all([
+          getTongueTwisters(),
+          getUserProgress(user.id)
+        ]);
+
+        setTongueTwisters(twistersData);
+        setUserProgress(progressData);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [user]);
+
+  const filteredTongueTwisters = tongueTwisters.filter(
+    (twister) => selectedDifficulty === "All" || twister.difficulty === selectedDifficulty
   );
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container flex h-16 items-center justify-between px-4">
-          <h1 className="text-2xl font-bold">Tongue Twisters Challenge</h1>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
           <UserButton afterSignOutUrl="/" />
         </div>
       </header>
 
       <main className="container px-4 py-8">
-        <div className="flex flex-col gap-8">
-          {/* Progress Tracking */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Your Progress</h2>
-            <ProgressTracking metrics={sampleProgressData} />
-          </section>
-
-          {/* Tongue Twisters */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Practice Tongue Twisters</h2>
-            <DifficultyFilter
-              selectedDifficulty={selectedDifficulties}
-              onDifficultyChange={setSelectedDifficulties}
-            />
-          </section>
-
-          <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredTwisters.map((twister) => (
-              <TongueTwisterTile
-                key={twister.id}
-                title={twister.title}
-                text={twister.text}
-                difficulty={twister.difficulty}
-                onPractice={() => router.push(`/practice/${twister.id}`)}
+        {error ? (
+          <div className="text-red-500 text-center p-4">{error}</div>
+        ) : isLoading ? (
+          <div className="text-center p-4">Loading...</div>
+        ) : (
+          <div className="space-y-8">
+            {userProgress && (
+              <ProgressTracking
+                metrics={{
+                  practiceStreak: userProgress.practice_frequency.daily,
+                  totalPracticeTime: userProgress.total_practice_time,
+                  averageClarityScore: userProgress.clarity_score,
+                  practiceFrequency: {
+                    thisWeek: userProgress.practice_frequency.weekly,
+                    lastWeek: userProgress.practice_frequency.monthly / 4, // Approximate
+                  },
+                  badges: userProgress.badges.map(badge => ({
+                    id: badge.id,
+                    name: badge.name,
+                    description: badge.description,
+                    earned: badge.earned,
+                  }))
+                }}
               />
-            ))}
-          </section>
+            )}
 
-          {filteredTwisters.length === 0 && (
-            <p className="text-center text-muted-foreground">
-              No tongue twisters found for the selected difficulty levels.
-            </p>
-          )}
-        </div>
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Tongue Twisters</h2>
+                <DifficultyFilter
+                  selectedDifficulty={selectedDifficulty}
+                  onDifficultyChange={setSelectedDifficulty}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredTongueTwisters.map((twister) => (
+                  <TongueTwisterTile
+                    key={twister.id}
+                    title={generateTitle(twister.text)}
+                    text={twister.text}
+                    difficulty={twister.difficulty}
+                    onClick={() => router.push(`/practice/${twister.id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

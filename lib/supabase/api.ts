@@ -1,6 +1,6 @@
 import { supabase } from './client';
 import type { TongueTwister, UserProgress } from './types';
-import { Database } from './database.types';
+import type { Database } from './database.types';
 
 export async function getTongueTwisters(): Promise<TongueTwister[]> {
   const { data, error } = await supabase
@@ -31,27 +31,29 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
     .eq('user_id', userId)
     .single();
 
-  if (error) throw error;
-  if (!data) {
-    // Create new progress record if none exists
-    const { data: newData, error: createError } = await supabase
-      .from('user_progress')
-      .insert([
-        {
-          user_id: userId,
-          practice_frequency: { daily: 0, weekly: 0, monthly: 0 },
-          clarity_score: 0,
-          total_practice_time: 0,
-          badges: []
-        }
-      ])
-      .select()
-      .single();
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No record found, create a new one
+      const { data: newData, error: createError } = await supabase
+        .from('user_progress')
+        .insert([
+          {
+            user_id: userId,
+            practice_frequency: { daily: 0, weekly: 0, monthly: 0 },
+            clarity_score: 0,
+            total_practice_time: 0,
+            badges: []
+          }
+        ])
+        .select()
+        .single();
 
-    if (createError) throw createError;
-    return newData;
+      if (createError) throw createError;
+      return newData;
+    }
+    throw error;
   }
-
+  
   return data;
 }
 
@@ -73,41 +75,42 @@ export async function recordPracticeSession(
   clarityScore: number,
   duration: number
 ): Promise<void> {
-  const { error } = await supabase
-    .from('practice_sessions')
-    .insert([
-      {
-        user_id: userId,
-        tongue_twister_id: tongueTwisterId,
-        clarity_score: clarityScore,
-        duration: duration
-      }
-    ]);
-
-  if (error) throw error;
-
-  // Update user progress
-  const { data: currentProgress } = await supabase
+  const { data: progress, error: fetchError } = await supabase
     .from('user_progress')
-    .select('total_practice_time, clarity_score')
+    .select('*')
     .eq('user_id', userId)
     .single();
 
-  if (currentProgress) {
-    const totalSessions = await supabase
-      .from('practice_sessions')
-      .select('clarity_score', { count: 'exact' })
-      .eq('user_id', userId);
+  if (fetchError) throw fetchError;
 
-    const sessionCount = totalSessions.count || 1;
-    const newAverageClarity = (
-      (currentProgress.clarity_score * (sessionCount - 1) + clarityScore) /
-      sessionCount
-    ).toFixed(2);
-
-    await updateUserProgress(userId, {
-      total_practice_time: currentProgress.total_practice_time + duration,
-      clarity_score: parseFloat(newAverageClarity)
-    });
+  if (!progress) {
+    throw new Error('User progress not found');
   }
+
+  // Update practice frequency
+  const now = new Date();
+  const practiceFrequency = progress.practice_frequency as {
+    daily: number;
+    weekly: number;
+    monthly: number;
+  };
+
+  // Update metrics
+  const updatedProgress = {
+    practice_frequency: {
+      ...practiceFrequency,
+      daily: practiceFrequency.daily + 1,
+      weekly: practiceFrequency.weekly + 1,
+      monthly: practiceFrequency.monthly + 1,
+    },
+    clarity_score: (progress.clarity_score + clarityScore) / 2, // Rolling average
+    total_practice_time: progress.total_practice_time + duration,
+  };
+
+  const { error: updateError } = await supabase
+    .from('user_progress')
+    .update(updatedProgress)
+    .eq('user_id', userId);
+
+  if (updateError) throw updateError;
 }

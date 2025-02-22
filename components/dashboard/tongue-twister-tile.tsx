@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,10 +9,10 @@ interface TongueTwisterTileProps {
   title: string;
   text: string;
   difficulty: "Easy" | "Intermediate" | "Advanced";
-  onPractice: () => void;
+  onClick: () => void;
 }
 
-export function TongueTwisterTile({ title, text, difficulty, onPractice }: TongueTwisterTileProps) {
+export function TongueTwisterTile({ title, text, difficulty, onClick }: TongueTwisterTileProps) {
   const difficultyColor = {
     Easy: "bg-green-500/10 text-green-500",
     Intermediate: "bg-yellow-500/10 text-yellow-500",
@@ -30,7 +32,7 @@ export function TongueTwisterTile({ title, text, difficulty, onPractice }: Tongu
       </CardHeader>
       <CardContent>
         <Button
-          onClick={onPractice}
+          onClick={onClick}
           className="w-full group-hover:bg-primary/90"
           size="lg"
         >

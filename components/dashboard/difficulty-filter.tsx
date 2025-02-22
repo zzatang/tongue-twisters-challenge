@@ -1,39 +1,32 @@
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+"use client";
+
+import { Button } from "@/components/ui/button";
+
+type Difficulty = 'Easy' | 'Intermediate' | 'Advanced' | 'All';
 
 interface DifficultyFilterProps {
-  selectedDifficulty: string[];
-  onDifficultyChange: (value: string[]) => void;
+  selectedDifficulty: Difficulty;
+  onDifficultyChange: (difficulty: Difficulty) => void;
 }
 
 export function DifficultyFilter({
   selectedDifficulty,
   onDifficultyChange,
 }: DifficultyFilterProps) {
+  const difficulties: Difficulty[] = ['All', 'Easy', 'Intermediate', 'Advanced'];
+
   return (
-    <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-medium">Difficulty Level</h3>
-      <ToggleGroup
-        type="multiple"
-        value={selectedDifficulty}
-        onValueChange={onDifficultyChange}
-        className="justify-start"
-      >
-        <ToggleGroupItem value="Easy" aria-label="Toggle easy difficulty">
-          Easy
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="Intermediate"
-          aria-label="Toggle intermediate difficulty"
+    <div className="flex gap-2">
+      {difficulties.map((difficulty) => (
+        <Button
+          key={difficulty}
+          variant={selectedDifficulty === difficulty ? "default" : "outline"}
+          onClick={() => onDifficultyChange(difficulty)}
+          className="text-sm"
         >
-          Intermediate
-        </ToggleGroupItem>
-        <ToggleGroupItem
-          value="Advanced"
-          aria-label="Toggle advanced difficulty"
-        >
-          Advanced
-        </ToggleGroupItem>
-      </ToggleGroup>
+          {difficulty}
+        </Button>
+      ))}
     </div>
   );
 }

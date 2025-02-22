@@ -7,46 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpeechRecorder } from "@/components/practice/speech-recorder";
 import { Feedback } from "@/components/practice/feedback";
-
-// Sample data - This would come from your Supabase database in production
-const tongueTwisters = [
-  {
-    id: "1",
-    title: "Peter Piper",
-    text: "Peter Piper picked a peck of pickled peppers. A peck of pickled peppers Peter Piper picked.",
-    difficulty: "Easy",
-  },
-  {
-    id: "2",
-    title: "She Sells Seashells",
-    text: "She sells seashells by the seashore. The shells she sells are surely seashells.",
-    difficulty: "Easy",
-  },
-  {
-    id: "3",
-    title: "Fuzzy Wuzzy",
-    text: "Fuzzy Wuzzy was a bear. Fuzzy Wuzzy had no hair. Fuzzy Wuzzy wasn't fuzzy, was he?",
-    difficulty: "Intermediate",
-  },
-  {
-    id: "4",
-    title: "Unique New York",
-    text: "Unique New York. You know you need unique New York.",
-    difficulty: "Intermediate",
-  },
-  {
-    id: "5",
-    title: "Six Slick Slim Slick Slabs",
-    text: "Six slick slim slick slabs split.",
-    difficulty: "Advanced",
-  },
-] as const;
-
-interface PracticePageProps {
-  params: {
-    id: string;
-  };
-}
+import { analyzeSpeech } from "@/lib/api/speech";
+import { getTongueTwisterById } from "@/lib/supabase/api";
+import { TongueTwister } from "@/lib/supabase/types";
 
 type FeedbackData = {
   clarityScore: number;
@@ -58,50 +21,63 @@ type FeedbackData = {
   tips: string[];
 };
 
-export default function PracticePage({ params }: PracticePageProps) {
+// Helper function to generate a title from the tongue twister text
+function generateTitle(text: string): string {
+  // Take first few words (up to 5) and capitalize them
+  return text.split(' ').slice(0, 5).join(' ');
+}
+
+export default function PracticePage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [tongueTwister, setTongueTwister] = useState<(typeof tongueTwisters)[number] | null>(null);
+  const [tongueTwister, setTongueTwister] = useState<TongueTwister | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const twister = tongueTwisters.find((t) => t.id === params.id);
-    if (!twister) {
-      router.push("/dashboard");
-      return;
-    }
-    setTongueTwister(twister);
+    const fetchTongueTwister = async () => {
+      try {
+        const twister = await getTongueTwisterById(params.id);
+        if (!twister) {
+          router.push("/dashboard");
+          return;
+        }
+        setTongueTwister(twister);
+      } catch (error) {
+        console.error("Error fetching tongue twister:", error);
+        router.push("/dashboard");
+      }
+    };
+
+    fetchTongueTwister();
   }, [params.id, router]);
 
   const handleRecordingComplete = async (audioBlob: Blob) => {
     setIsAnalyzing(true);
     setFeedback(null);
+    setError(null);
 
-    // TODO: Implement actual Google Speech-to-Text API integration
-    // For now, simulate API response with mock data
-    setTimeout(() => {
-      setFeedback({
-        clarityScore: 75,
-        mispronunciations: [
-          {
-            word: "Peter",
-            expected: "piːtər",
-            actual: "pɪtər",
-          },
-          {
-            word: "Piper",
-            expected: "paɪpər",
-            actual: "pɪpər",
-          },
-        ],
-        tips: [
-          "Focus on the 'long i' sound in 'Piper'",
-          "Try slowing down the phrase to improve accuracy",
-          "Practice the 'p' and 't' sounds separately",
-        ],
-      });
+    try {
+      const result = await analyzeSpeech(audioBlob, params.id);
+
+      if (!result.success || !result.result) {
+        throw new Error(result.error || 'Failed to analyze speech');
+      }
+
+      // Convert the API result to our FeedbackData format
+      const feedbackData: FeedbackData = {
+        clarityScore: result.result.score,
+        mispronunciations: [], // We'll enhance this with actual mispronunciations later
+        tips: result.result.feedback,
+      };
+
+      setFeedback(feedbackData);
+    } catch (error) {
+      console.error("Error analyzing speech:", error);
+      setError(error instanceof Error ? error.message : "Failed to analyze speech");
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   if (!tongueTwister) {
@@ -120,7 +96,7 @@ export default function PracticePage({ params }: PracticePageProps) {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Dashboard
           </Button>
-          <h1 className="text-2xl font-bold">{tongueTwister.title}</h1>
+          <h1 className="text-2xl font-bold">{generateTitle(tongueTwister.text)}</h1>
         </div>
       </header>
 
@@ -136,6 +112,12 @@ export default function PracticePage({ params }: PracticePageProps) {
               </div>
 
               <SpeechRecorder onRecordingComplete={handleRecordingComplete} />
+
+              {error && (
+                <div className="text-sm text-red-500 text-center">
+                  {error}
+                </div>
+              )}
 
               <div className="text-sm text-muted-foreground">
                 <p className="font-medium mb-2">Tips:</p>
