@@ -1,0 +1,20 @@
+{
+  "css.customData": [".vscode/tailwind.json"],
+  "tailwindCSS.includeLanguages": {
+    "css": "css",
+    "javascript": "javascript",
+    "typescript": "typescript",
+    "jsx": "javascriptreact",
+    "tsx": "typescriptreact"
+  },
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "css.lint.unknownAtRules": "ignore",
+  "tailwindCSS.experimental.configFile": ".vscode/tailwind.json",
+  "tailwindCSS.validate": true,
+  "editor.formatOnSave": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "javascript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": true
+}
