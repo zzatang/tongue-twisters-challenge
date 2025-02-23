@@ -9,6 +9,7 @@ const client = new speech.SpeechClient({
 export interface SpeechAnalysisResult {
   text: string;
   confidence: number;
+  duration: number; // Total duration in seconds
   wordTimings: {
     word: string;
     startTime: number;
@@ -31,12 +32,14 @@ export async function analyzeSpeech(
     };
 
     const config = {
-      encoding: 'LINEAR16' as const,
-      sampleRateHertz: 16000,
+      encoding: 'WEBM_OPUS' as const,
+      sampleRateHertz: 48000,
+      audioChannelCount: 1,
       languageCode: 'en-US',
       enableWordTimeOffsets: true,
       enableWordConfidence: true,
       model: 'default',
+      useEnhanced: true, // Enable enhanced speech recognition
     };
 
     const request = {
@@ -44,12 +47,31 @@ export async function analyzeSpeech(
       config,
     };
 
+    console.log('Sending request to Google Speech API with config:', {
+      ...config,
+      content_length: audioBuffer.length,
+    });
+
     // Perform the transcription
     const [response] = await client.recognize(request);
-    const transcription = response.results?.[0]?.alternatives?.[0];
+    
+    // Create a safe version of the response data for logging
+    const responseInfo = {
+      results: response?.results?.length || 0,
+      hasAlternatives: Boolean(response?.results?.[0]?.alternatives?.length),
+      firstTranscript: response?.results?.[0]?.alternatives?.[0]?.transcript || '',
+    };
+    
+    console.log('Google Speech API response:', JSON.stringify(responseInfo, null, 2));
+
+    if (!response?.results || response.results.length === 0) {
+      throw new Error('No transcription results returned from Google Speech API');
+    }
+
+    const transcription = response.results[0]?.alternatives?.[0];
 
     if (!transcription) {
-      throw new Error('No transcription result available');
+      throw new Error('No transcription alternatives available');
     }
 
     // Process word timing information
@@ -62,9 +84,15 @@ export async function analyzeSpeech(
       confidence: wordInfo.confidence || 0,
     })) || [];
 
+    // Calculate total duration from word timings
+    const duration = wordTimings.length > 0
+      ? wordTimings[wordTimings.length - 1].endTime - wordTimings[0].startTime
+      : 0;
+
     return {
       text: transcription.transcript || '',
       confidence: transcription.confidence || 0,
+      duration,
       wordTimings,
     };
   } catch (error) {
