@@ -19,8 +19,7 @@ export interface SpeechAnalysisResult {
 }
 
 export async function analyzeSpeech(
-  audioBuffer: Buffer,
-  expectedText: string
+  audioBuffer: Buffer
 ): Promise<SpeechAnalysisResult> {
   try {
     // Create a unique name for this audio sample
@@ -34,12 +33,10 @@ export async function analyzeSpeech(
     const config = {
       encoding: 'WEBM_OPUS' as const,
       sampleRateHertz: 48000,
-      audioChannelCount: 1,
       languageCode: 'en-US',
       enableWordTimeOffsets: true,
-      enableWordConfidence: true,
-      model: 'default',
-      useEnhanced: true, // Enable enhanced speech recognition
+      enableAutomaticPunctuation: true,
+      model: 'latest_long',
     };
 
     const request = {
@@ -47,42 +44,21 @@ export async function analyzeSpeech(
       config,
     };
 
-    console.log('Sending request to Google Speech API with config:', {
-      ...config,
-      content_length: audioBuffer.length,
-    });
-
-    // Perform the transcription
+    // Make the request
     const [response] = await client.recognize(request);
-    
-    // Create a safe version of the response data for logging
-    const responseInfo = {
-      results: response?.results?.length || 0,
-      hasAlternatives: Boolean(response?.results?.[0]?.alternatives?.length),
-      firstTranscript: response?.results?.[0]?.alternatives?.[0]?.transcript || '',
-    };
-    
-    console.log('Google Speech API response:', JSON.stringify(responseInfo, null, 2));
+    const transcription = response.results?.[0];
 
-    if (!response?.results || response.results.length === 0) {
-      throw new Error('No transcription results returned from Google Speech API');
+    if (!transcription || !transcription.alternatives?.[0]) {
+      throw new Error('No transcription results');
     }
 
-    const transcription = response.results[0]?.alternatives?.[0];
-
-    if (!transcription) {
-      throw new Error('No transcription alternatives available');
-    }
-
-    // Process word timing information
-    const wordTimings = transcription.words?.map((wordInfo) => ({
-      word: wordInfo.word || '',
-      startTime: Number(wordInfo.startTime?.seconds || 0) + 
-                Number(wordInfo.startTime?.nanos || 0) / 1e9,
-      endTime: Number(wordInfo.endTime?.seconds || 0) + 
-              Number(wordInfo.endTime?.nanos || 0) / 1e9,
-      confidence: wordInfo.confidence || 0,
-    })) || [];
+    const result = transcription.alternatives[0];
+    const wordTimings = (result.words || []).map(word => ({
+      word: word.word || '',
+      startTime: Number(word.startTime?.seconds || 0) + Number(word.startTime?.nanos || 0) / 1e9,
+      endTime: Number(word.endTime?.seconds || 0) + Number(word.endTime?.nanos || 0) / 1e9,
+      confidence: word.confidence || 0,
+    }));
 
     // Calculate total duration from word timings
     const duration = wordTimings.length > 0
@@ -90,14 +66,14 @@ export async function analyzeSpeech(
       : 0;
 
     return {
-      text: transcription.transcript || '',
-      confidence: transcription.confidence || 0,
+      text: result.transcript || '',
+      confidence: result.confidence || 0,
       duration,
       wordTimings,
     };
   } catch (error) {
     console.error('Speech analysis error:', error);
-    throw new Error('Failed to analyze speech');
+    throw error;
   }
 }
 

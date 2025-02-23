@@ -30,7 +30,7 @@ const BadgeIcon = ({ name }: { name: string }) => {
   }
 };
 
-export const BadgesShowcase = ({ badges, className }: BadgesShowcaseProps) => {
+export default function BadgesShowcase({ badges, className }: BadgesShowcaseProps) {
   return (
     <Card className={cn("w-full", className)}>
       <CardHeader>
@@ -81,4 +81,4 @@ export const BadgesShowcase = ({ badges, className }: BadgesShowcaseProps) => {
       </CardContent>
     </Card>
   );
-};
+}
