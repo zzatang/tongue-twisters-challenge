@@ -1,15 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/clerk';
-import { getUserProgress } from '@/lib/supabase/api';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
-export const GET = withAuth(async (userId: string, req: NextRequest) => {
+export const GET = withAuth(async (userId: string, request: NextRequest) => {
   try {
-    const progress = await getUserProgress(userId);
-    return NextResponse.json(progress);
+    const { data: progress, error } = await supabaseAdmin
+      .from('user_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user progress:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch progress' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ progress });
   } catch (error) {
-    console.error('Error fetching user progress:', error);
+    console.error('Error in progress API:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch user progress' },
+      { error: 'Failed to fetch progress' },
       { status: 500 }
     );
   }

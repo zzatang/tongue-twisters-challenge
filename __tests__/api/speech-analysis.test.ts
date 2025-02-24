@@ -1,10 +1,11 @@
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { NextRequest, NextResponse } from 'next/server';
 import { POST } from '@/app/api/speech/analyze/route';
-import { analyzeSpeech, SpeechAnalysisResult } from '@/lib/speech/google-speech';
+import type { SpeechAnalysisResult } from '@/lib/speech/google-speech';
+import { analyzeSpeech } from '@/lib/speech/google-speech';
 import { getTongueTwisterById } from '@/lib/supabase/api';
 import { withAuth } from '@/lib/auth/clerk';
-import { TongueTwister } from '@/lib/supabase/types';
+import type { TongueTwister } from '@/lib/supabase/types';
 import 'whatwg-fetch';
 
 // Mock the auth wrapper
@@ -21,7 +22,7 @@ describe('Speech Analysis API', () => {
   const mockTongueTwister: TongueTwister = {
     id: 'test-id',
     text: 'She sells seashells',
-    difficulty: 'Easy',
+    difficulty: 1,
     category: 'S sounds',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

@@ -53,7 +53,7 @@ export const Feedback = ({ isLoading, feedback }: FeedbackProps) => {
               {clarityScore}%
             </span>
           </div>
-          <Progress value={clarityScore} className="h-2" />
+          <Progress value={typeof clarityScore === 'number' ? clarityScore : 0} className="h-2" />
         </div>
 
         {/* Mispronunciations */}

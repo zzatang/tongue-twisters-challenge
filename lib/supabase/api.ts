@@ -25,6 +25,43 @@ export async function getTongueTwisterById(id: string): Promise<TongueTwister> {
 }
 
 export async function getUserProgress(userId: string): Promise<UserProgress> {
+  // First check if the user exists
+  const { data: existingUser, error: checkError } = await supabase
+    .from('user_progress')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (!existingUser) {
+    // User doesn't exist, create a new record
+    const { data: newData, error: createError } = await supabase
+      .from('user_progress')
+      .insert([
+        {
+          user_id: userId,
+          practice_frequency: {
+            daily: {},
+            weekly: {},
+            monthly: {}
+          },
+          clarity_score: 0,
+          total_practice_time: 0,
+          total_sessions: 0,
+          practice_streak: 0,
+          badges: []
+        }
+      ])
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Error creating user progress:', createError);
+      throw createError;
+    }
+    return newData;
+  }
+
+  // User exists, get their data
   const { data, error } = await supabase
     .from('user_progress')
     .select('*')
@@ -32,28 +69,10 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      // No record found, create a new one
-      const { data: newData, error: createError } = await supabase
-        .from('user_progress')
-        .insert([
-          {
-            user_id: userId,
-            practice_frequency: { daily: 0, weekly: 0, monthly: 0 },
-            clarity_score: 0,
-            total_practice_time: 0,
-            badges: []
-          }
-        ])
-        .select()
-        .single();
-
-      if (createError) throw createError;
-      return newData;
-    }
+    console.error('Error fetching user progress:', error);
     throw error;
   }
-  
+
   return data;
 }
 

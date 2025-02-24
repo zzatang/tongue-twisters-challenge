@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { SpeechRecorder } from '@/components/practice/speech-recorder';
-import { TongueTwister } from '@/lib/supabase/types';
+import type { TongueTwister } from '@/lib/supabase/types';
 
 // Mock useToast hook
 jest.mock('@/components/ui/use-toast', () => ({
@@ -55,10 +55,13 @@ describe('SpeechRecorder', () => {
   const mockTongueTwister: TongueTwister = {
     id: '1',
     text: 'Peter Piper picked a peck of pickled peppers',
-    difficulty: 'Easy',
+    difficulty: 1,
     category: 'P sounds',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    description: 'A classic tongue twister focusing on P sounds',
+    example_words: ['Peter', 'Piper', 'picked', 'peppers'],
+    phonetic_focus: ['p']
   };
 
   beforeEach(() => {

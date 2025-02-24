@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Square } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { TongueTwister } from '@/lib/supabase/types';
+import type { TongueTwister } from '@/lib/supabase/types';
 
 interface SpeechRecorderProps {
   onRecordingComplete: (audioBlob: Blob) => void;
