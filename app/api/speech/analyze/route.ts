@@ -7,6 +7,7 @@ import { updateUserProgress } from '@/lib/services/progress-service';
 
 export const POST = withAuth(async (userId: string, request: NextRequest) => {
   try {
+    // Parse the JSON body
     const body = await request.json();
     const { audioData, tongueTwisterId } = body;
 
@@ -39,19 +40,22 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
     );
 
     // Update user progress with the practice results
-    await updateUserProgress({
-      tongueId: tongueTwisterId,
-      duration: analysisResult.duration,
-      clarityScore: score,
-    });
+    await updateUserProgress(
+      userId,
+      tongueTwisterId,
+      analysisResult.duration,
+      score
+    );
 
     return NextResponse.json({
-      text: analysisResult.text,
-      confidence: analysisResult.confidence,
-      duration: analysisResult.duration,
-      wordTimings: analysisResult.wordTimings,
-      score,
-      feedback,
+      success: true,
+      result: {
+        text: analysisResult.text,
+        confidence: analysisResult.confidence,
+        score,
+        feedback,
+        wordTimings: analysisResult.wordTimings,
+      },
     });
   } catch (error) {
     console.error('Speech analysis error:', error);

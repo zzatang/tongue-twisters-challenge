@@ -1,64 +1,100 @@
-import { supabase } from '@/lib/supabase/client';
-import { Badge, UserBadge } from '@/lib/supabase/types';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import type { Badge, UserBadge, BadgeProgress } from '@/lib/supabase/types';
 
-export interface BadgeProgress {
-  streak: number;
-  clarity: number;
-  sessions: number;
-  speed: number;
-  accuracy: number;
-  time: number;
+type ProgressMetric = keyof Omit<BadgeProgress, 'practice_frequency' | 'created_at' | 'updated_at' | 'user_id'>;
+
+interface BadgeCriteria {
+  type: ProgressMetric;
+  value: number;
 }
 
-export async function checkAndAwardBadges(userId: string, progress: BadgeProgress): Promise<Badge[]> {
-  // Get all badges and user's earned badges
-  const { data: badges } = await supabase.from('badges').select('*');
-  const { data: userBadges } = await supabase
-    .from('user_badges')
-    .select('badge_id')
-    .eq('user_id', userId);
+function checkBadgeCriteria(progress: BadgeProgress, criteria: BadgeCriteria): boolean {
+  return progress[criteria.type] >= criteria.value;
+}
 
-  if (!badges) return [];
+export async function checkAndAwardBadges(userId: string, progress: BadgeProgress): Promise<void> {
+  try {
+    // Get all available badges
+    const { data: badges, error: badgesError } = await supabaseAdmin
+      .from('badges')
+      .select('*');
 
-  const earnedBadgeIds = new Set(userBadges?.map(ub => ub.badge_id) || []);
-  const newlyEarnedBadges: Badge[] = [];
-
-  // Check each badge
-  for (const badge of badges) {
-    if (earnedBadgeIds.has(badge.id)) continue;
-
-    const hasEarned = checkBadgeCriteria(badge, progress);
-    if (hasEarned) {
-      await awardBadge(userId, badge.id);
-      newlyEarnedBadges.push(badge);
+    if (badgesError) {
+      console.error('Error fetching badges:', badgesError);
+      return;
     }
+
+    // Get user's existing badges
+    const { data: userBadges, error: userBadgesError } = await supabaseAdmin
+      .from('user_badges')
+      .select('badge_id')
+      .eq('user_id', userId);
+
+    if (userBadgesError) {
+      console.error('Error fetching user badges:', userBadgesError);
+      return;
+    }
+
+    const earnedBadgeIds = new Set((userBadges || []).map((ub: { badge_id: string }) => ub.badge_id));
+
+    // Check each badge's criteria
+    for (const badge of (badges || [])) {
+      if (earnedBadgeIds.has(badge.id)) continue;
+
+      const criteria: BadgeCriteria = {
+        type: badge.criteria_type as ProgressMetric,
+        value: badge.criteria_value
+      };
+
+      // Check if user meets the badge criteria
+      if (checkBadgeCriteria(progress, criteria)) {
+        // Award the badge
+        const { error: awardError } = await supabaseAdmin
+          .from('user_badges')
+          .insert({
+            user_id: userId,
+            badge_id: badge.id,
+            earned_at: new Date().toISOString()
+          });
+
+        if (awardError) {
+          console.error(`Error awarding badge ${badge.id}:`, awardError);
+        }
+      }
+    }
+
+    return;
+  } catch (error) {
+    console.error('Error in checkAndAwardBadges:', error);
+    return;
   }
-
-  return newlyEarnedBadges;
-}
-
-function checkBadgeCriteria(badge: Badge, progress: BadgeProgress): boolean {
-  const value = progress[badge.criteria_type];
-  return value >= badge.criteria_value;
-}
-
-async function awardBadge(userId: string, badgeId: string): Promise<void> {
-  await supabase.from('user_badges').insert({
-    user_id: userId,
-    badge_id: badgeId
-  });
 }
 
 export async function getUserBadges(userId: string): Promise<(UserBadge & { badge: Badge })[]> {
-  const { data } = await supabase
+  const { data: userBadges, error } = await supabaseAdmin
     .from('user_badges')
     .select('*, badge:badges(*)')
-    .eq('user_id', userId);
-  
-  return data || [];
+    .eq('user_id', userId)
+    .order('earned_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching user badges:', error);
+    return [];
+  }
+
+  return (userBadges || []).map((ub: UserBadge & { badge: Badge }) => ub);
 }
 
 export async function getAllBadges(): Promise<Badge[]> {
-  const { data } = await supabase.from('badges').select('*');
+  const { data, error } = await supabaseAdmin
+    .from('badges')
+    .select('*')
+    .order('criteria_value', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching badges:', error);
+    return [];
+  }
+
   return data || [];
 }

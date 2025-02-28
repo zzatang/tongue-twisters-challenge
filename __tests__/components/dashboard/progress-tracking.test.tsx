@@ -3,7 +3,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { ProgressTracking } from '@/components/dashboard/progress-tracking';
 import { getUserBadges, getAllBadges } from '@/lib/services/badge-service';
 import { useToast } from '@/components/ui/use-toast';
-import { Badge } from '@/lib/supabase/types';
+import type { Badge } from '@/lib/supabase/types';
+import { useAuth } from '@clerk/nextjs';
+
+// Mock Clerk auth
+jest.mock('@clerk/nextjs', () => ({
+  useAuth: jest.fn(() => ({
+    userId: 'test-user',
+  })),
+}));
 
 // Mock BadgesShowcase component
 jest.mock('@/components/dashboard/badges-showcase', () => ({
@@ -70,6 +78,9 @@ describe('ProgressTracking', () => {
     jest.clearAllMocks();
     (getAllBadges as jest.Mock).mockResolvedValue(mockBadges);
     (getUserBadges as jest.Mock).mockResolvedValue(mockUserBadges);
+    (useAuth as jest.Mock).mockImplementation(() => ({
+      userId: 'test-user',
+    }));
   });
 
   it('renders progress metrics', async () => {
@@ -80,10 +91,13 @@ describe('ProgressTracking', () => {
       />
     );
 
-    expect(screen.getByText('5 days')).toBeInTheDocument();
-    expect(screen.getByText('2h 0m')).toBeInTheDocument();
-    expect(screen.getByText('85%')).toBeInTheDocument();
-    expect(screen.getByText('3 sessions')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('5')).toBeInTheDocument(); // Practice streak
+      expect(screen.getByText('120')).toBeInTheDocument(); // Total practice time
+      expect(screen.getByText('85%')).toBeInTheDocument(); // Average clarity score
+      expect(screen.getByText('3')).toBeInTheDocument(); // This week's practice count
+      expect(screen.getByText('2')).toBeInTheDocument(); // Last week's practice count
+    });
   });
 
   it('loads and displays badges', async () => {

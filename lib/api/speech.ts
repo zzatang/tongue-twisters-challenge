@@ -20,13 +20,25 @@ export async function analyzeSpeech(
   tongueTwisterId: string
 ): Promise<SpeechAnalysisResult> {
   try {
-    const formData = new FormData();
-    formData.append('audio', audioBlob);
-    formData.append('tongueTwisterId', tongueTwisterId);
+    // Convert blob to base64
+    const base64Audio = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        resolve(base64String.split(',')[1]); // Remove data URL prefix
+      };
+      reader.readAsDataURL(audioBlob);
+    });
 
     const response = await fetch('/api/speech/analyze', {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        audioData: base64Audio,
+        tongueTwisterId,
+      }),
     });
 
     const data = await response.json();

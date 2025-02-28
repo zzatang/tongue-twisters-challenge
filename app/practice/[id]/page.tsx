@@ -9,7 +9,7 @@ import { SpeechRecorder } from "@/components/practice/speech-recorder";
 import { Feedback } from "@/components/practice/feedback";
 import { analyzeSpeech } from "@/lib/api/speech";
 import { getTongueTwisterById } from "@/lib/supabase/api";
-import { TongueTwister } from "@/lib/supabase/types";
+import type { TongueTwister } from "@/lib/supabase/types";
 
 type FeedbackData = {
   clarityScore: number;
@@ -35,7 +35,7 @@ export default function PracticePage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTongueTwister = async () => {
+    async function fetchTongueTwister() {
       try {
         const twister = await getTongueTwisterById(params.id);
         if (!twister) {
@@ -47,7 +47,7 @@ export default function PracticePage({ params }: { params: { id: string } }) {
         console.error("Error fetching tongue twister:", error);
         router.push("/dashboard");
       }
-    };
+    }
 
     fetchTongueTwister();
   }, [params.id, router]);
@@ -107,11 +107,22 @@ export default function PracticePage({ params }: { params: { id: string } }) {
               <CardTitle>Practice this tongue twister</CardTitle>
             </CardHeader>
             <CardContent className="space-y-8">
-              <div className="text-xl font-medium text-center p-8 bg-muted/50 rounded-lg">
-                {tongueTwister.text}
-              </div>
+              {tongueTwister ? (
+                <>
+                  <div className="text-xl font-medium text-center p-8 bg-muted/50 rounded-lg">
+                    {tongueTwister.text}
+                  </div>
 
-              <SpeechRecorder onRecordingComplete={handleRecordingComplete} />
+                  <SpeechRecorder 
+                    onRecordingComplete={handleRecordingComplete}
+                    tongueTwister={tongueTwister}
+                  />
+                </>
+              ) : (
+                <div className="text-center p-8">
+                  Loading tongue twister...
+                </div>
+              )}
 
               {error && (
                 <div className="text-sm text-red-500 text-center">
