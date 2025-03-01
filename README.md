@@ -1,4 +1,5 @@
 [![CodeGuide](/codeguide-backdrop.svg)](https://codeguide.dev)
+[![CI/CD](https://github.com/zzatang/tongue-twisters-challenge/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/zzatang/tongue-twisters-challenge/actions)
 
 
 # CodeGuide Starter Pro
@@ -143,3 +144,11 @@ To implement the generated documentation from CodeGuide:
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and continuous deployment. The pipeline:
+1. Runs TypeScript type checking
+2. Runs ESLint for code quality
+3. Runs Jest tests
+4. Deploys to Vercel on successful main branch pushes
