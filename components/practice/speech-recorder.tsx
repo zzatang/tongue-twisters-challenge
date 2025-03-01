@@ -7,49 +7,44 @@ import { useToast } from '@/components/ui/use-toast';
 import type { TongueTwister } from '@/lib/supabase/types';
 
 interface SpeechRecorderProps {
-  onRecordingComplete: (audioBlob: Blob) => void;
   tongueTwister: TongueTwister;
+  onRecordingComplete: (audioData: string) => void;
 }
 
-function SpeechRecorder({ onRecordingComplete, tongueTwister }: SpeechRecorderProps) {
+export function SpeechRecorder({ tongueTwister, onRecordingComplete }: SpeechRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
   const { toast } = useToast();
+
+  const handleDataAvailable = useCallback((event: BlobEvent) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64Data = (reader.result as string).split(',')[1];
+      onRecordingComplete(base64Data);
+    };
+    reader.readAsDataURL(event.data);
+  }, [onRecordingComplete]);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        onRecordingComplete(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
+      mediaRecorder.current = new MediaRecorder(stream);
+      mediaRecorder.current.addEventListener('dataavailable', handleDataAvailable);
+      mediaRecorder.current.start();
       setIsRecording(true);
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to access microphone. Please check permissions.',
+        description: 'Failed to access microphone. Please ensure you have granted microphone permissions.',
         variant: 'destructive',
       });
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
+    if (mediaRecorder.current && mediaRecorder.current.state === 'recording') {
+      mediaRecorder.current.stop();
+      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
     }
   };
@@ -58,15 +53,13 @@ function SpeechRecorder({ onRecordingComplete, tongueTwister }: SpeechRecorderPr
     <div className="flex flex-col items-center gap-4">
       <div className="text-lg font-medium mb-2">{tongueTwister.text}</div>
       <Button
-        onClick={isRecording ? stopRecording : startRecording}
-        variant={isRecording ? "destructive" : "default"}
-        size="lg"
         className="w-full max-w-xs"
+        onClick={isRecording ? stopRecording : startRecording}
       >
         {isRecording ? (
           <>
             <Square className="mr-2 h-4 w-4" />
-            Stop Recording
+            Recording...
           </>
         ) : (
           <>
@@ -78,5 +71,3 @@ function SpeechRecorder({ onRecordingComplete, tongueTwister }: SpeechRecorderPr
     </div>
   );
 }
-
-export { SpeechRecorder };

@@ -11,9 +11,10 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^lucide-react$': '<rootDir>/node_modules/lucide-react/dist/cjs/lucide-react.js',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!(lucide-react|@radix-ui|@clerk/nextjs|@clerk/backend)/)',
+    '/node_modules/(?!(lucide-react|@radix-ui|@clerk/nextjs|@clerk/backend|next)/)',
   ],
   testPathIgnorePatterns: [
     '<rootDir>/.next/',

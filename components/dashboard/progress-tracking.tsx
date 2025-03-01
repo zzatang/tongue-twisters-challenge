@@ -1,13 +1,12 @@
-"use client";
-
 import React, { useEffect, useState } from 'react';
-import { useAuth } from "@clerk/nextjs";
-import type { Badge, UserBadge } from "@/lib/supabase/types";
+import { useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Star, Activity, Award } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BadgesShowcase from "./badges-showcase";
 import { getUserBadges, getAllBadges } from "@/lib/services/badge-service";
+import { useToast } from '@/components/ui/use-toast';
+import type { Badge } from '@/lib/supabase/types';
 
 interface UserProgress {
   practice_streak: number;
@@ -54,6 +53,7 @@ export function ProgressTracking({ metrics, userId: propUserId, className }: Pro
   const [earnedBadgeIds, setEarnedBadgeIds] = useState<string[]>([]);
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!effectiveUserId) {
@@ -115,11 +115,16 @@ export function ProgressTracking({ metrics, userId: propUserId, className }: Pro
       } catch (err) {
         console.error('Error fetching user data:', err);
         setError('Failed to load user progress');
+        toast({
+          title: 'Error',
+          description: 'Failed to load user progress. Please try again later.',
+          variant: 'destructive',
+        });
       }
     }
 
     fetchUserData();
-  }, [effectiveUserId, metrics]);
+  }, [effectiveUserId, metrics, toast]);
 
   if (!effectiveUserId) {
     return <div className="text-red-500">Please log in to view your progress</div>;
@@ -144,6 +149,11 @@ export function ProgressTracking({ metrics, userId: propUserId, className }: Pro
   const practicesThisWeek = Object.entries(dailyPractices)
     .filter(([date]) => date && date.startsWith(thisWeek))
     .reduce((sum, [_, count]) => sum + (typeof count === 'number' ? count : 0), 0);
+
+  const formatTime = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    return `${Math.floor(minutes / 60)}h`;
+  };
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -192,11 +202,4 @@ export function ProgressTracking({ metrics, userId: propUserId, className }: Pro
       <BadgesShowcase badges={badges} earnedBadgeIds={earnedBadgeIds} />
     </div>
   );
-}
-
-function formatTime(minutes: number) {
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }

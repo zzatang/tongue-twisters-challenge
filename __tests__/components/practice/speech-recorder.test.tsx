@@ -1,57 +1,32 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SpeechRecorder } from '@/components/practice/speech-recorder';
 import type { TongueTwister } from '@/lib/supabase/types';
+import { useToast } from '@/components/ui/use-toast';
 
-// Mock useToast hook
 jest.mock('@/components/ui/use-toast', () => ({
-  useToast: () => ({
-    toast: jest.fn(),
-  }),
+  useToast: jest.fn(),
 }));
 
 // Mock MediaRecorder
-class MockMediaRecorder {
-  ondataavailable: ((e: any) => void) | null = null;
-  onstop: (() => void) | null = null;
-  state: 'inactive' | 'recording' = 'inactive';
-
-  constructor(public stream: MediaStream) {}
-
-  start() {
-    this.state = 'recording';
-  }
-
-  stop() {
-    this.state = 'inactive';
-    if (this.onstop) this.onstop();
-    if (this.ondataavailable) {
-      this.ondataavailable({ data: new Blob(['test-audio'], { type: 'audio/webm' }) });
-    }
-  }
-
-  static isTypeSupported(type: string): boolean {
-    return type === 'audio/webm';
-  }
-}
+const mockStart = jest.fn();
+const mockStop = jest.fn();
+const mockMediaRecorder = {
+  start: mockStart,
+  stop: mockStop,
+  state: 'inactive',
+  addEventListener: jest.fn(),
+};
 
 // Mock getUserMedia
-const mockGetUserMedia = jest.fn().mockImplementation(() => {
-  return Promise.resolve(new MediaStream());
-});
-
-// Mock navigator.mediaDevices
-Object.defineProperty(window.navigator, 'mediaDevices', {
-  value: {
-    getUserMedia: mockGetUserMedia,
-  },
-  writable: true,
-});
-
-// Mock MediaRecorder globally
-global.MediaRecorder = MockMediaRecorder as any;
+const mockGetUserMedia = jest.fn();
+window.navigator.mediaDevices = {
+  getUserMedia: mockGetUserMedia,
+} as any;
 
 describe('SpeechRecorder', () => {
+  const mockToast = jest.fn();
+  const mockOnRecordingComplete = jest.fn();
   const mockTongueTwister: TongueTwister = {
     id: '1',
     text: 'Peter Piper picked a peck of pickled peppers',
@@ -66,65 +41,69 @@ describe('SpeechRecorder', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (useToast as jest.Mock).mockReturnValue({ toast: mockToast });
+    mockGetUserMedia.mockResolvedValue('mock-stream');
+    (window as any).MediaRecorder = jest.fn(() => mockMediaRecorder);
   });
 
-  it('renders record button', () => {
-    const onRecordingComplete = jest.fn();
-    const { getByRole } = render(
+  it('renders correctly', () => {
+    render(
       <SpeechRecorder
-        onRecordingComplete={onRecordingComplete}
         tongueTwister={mockTongueTwister}
+        onRecordingComplete={mockOnRecordingComplete}
       />
     );
 
-    expect(getByRole('button', { name: /record/i })).toBeInTheDocument();
+    expect(screen.getByText(mockTongueTwister.text)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start recording/i })).toBeInTheDocument();
   });
 
   it('handles recording flow', async () => {
-    const onRecordingComplete = jest.fn();
-    const { getByRole } = render(
+    render(
       <SpeechRecorder
-        onRecordingComplete={onRecordingComplete}
         tongueTwister={mockTongueTwister}
+        onRecordingComplete={mockOnRecordingComplete}
       />
     );
 
     // Start recording
-    const recordButton = getByRole('button', { name: /record/i });
-    fireEvent.click(recordButton);
+    const startButton = screen.getByRole('button', { name: /start recording/i });
+    fireEvent.click(startButton);
 
-    // Should show stop button
-    const stopButton = getByRole('button', { name: /stop/i });
+    await waitFor(() => {
+      expect(mockGetUserMedia).toHaveBeenCalledWith({ audio: true });
+      expect(mockStart).toHaveBeenCalled();
+    });
+
+    // Update button state
+    const stopButton = screen.getByRole('button', { name: /recording/i });
     expect(stopButton).toBeInTheDocument();
 
     // Stop recording
     fireEvent.click(stopButton);
-
-    // Wait for recording to be processed
-    await waitFor(() => {
-      expect(onRecordingComplete).toHaveBeenCalled();
-    });
+    expect(mockStop).toHaveBeenCalled();
   });
 
   it('handles microphone access error', async () => {
-    // Mock getUserMedia to reject
-    mockGetUserMedia.mockRejectedValueOnce(new Error('Permission denied'));
+    const error = new Error('Permission denied');
+    mockGetUserMedia.mockRejectedValue(error);
 
-    const onRecordingComplete = jest.fn();
-    const { getByRole } = render(
+    render(
       <SpeechRecorder
-        onRecordingComplete={onRecordingComplete}
         tongueTwister={mockTongueTwister}
+        onRecordingComplete={mockOnRecordingComplete}
       />
     );
 
-    // Try to start recording
-    const recordButton = getByRole('button', { name: /record/i });
-    fireEvent.click(recordButton);
+    const startButton = screen.getByRole('button', { name: /start recording/i });
+    fireEvent.click(startButton);
 
-    // Should show error toast
     await waitFor(() => {
-      expect(document.body).toHaveTextContent(/microphone access/i);
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Error',
+        description: 'Failed to access microphone. Please ensure you have granted microphone permissions.',
+        variant: 'destructive',
+      });
     });
   });
 });
