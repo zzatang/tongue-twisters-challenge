@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SpeechRecorder } from '@/components/practice/speech-recorder';
 import type { TongueTwister } from '@/lib/supabase/types';
 import { useToast } from '@/components/ui/use-toast';
@@ -34,11 +34,29 @@ Object.defineProperty(global.navigator, 'mediaDevices', {
 
 // Mock FileReader
 const mockReadAsDataURL = jest.fn();
-global.FileReader = jest.fn().mockImplementation(() => ({
+const mockFileReader = {
   readAsDataURL: mockReadAsDataURL,
   onloadend: null,
   result: 'data:audio/webm;base64,mockBase64Data',
-}));
+};
+
+// Use a class to properly mock FileReader
+class MockFileReader {
+  onloadend: null | (() => void) = null;
+  result: string = 'data:audio/webm;base64,mockBase64Data';
+  readAsDataURL(blob: Blob): void {
+    mockReadAsDataURL(blob);
+    // Simulate async behavior
+    setTimeout(() => {
+      if (this.onloadend !== null) {
+        this.onloadend();
+      }
+    }, 10);
+  }
+}
+
+// Apply the mock
+global.FileReader = MockFileReader as unknown as typeof FileReader;
 
 describe('SpeechRecorder', () => {
   const mockOnRecordingComplete = jest.fn();
@@ -60,38 +78,39 @@ describe('SpeechRecorder', () => {
     
     // Set up MediaRecorder mock
     class MockMediaRecorder {
-      state = 'inactive';
-      stream = mockStream;
+      state: 'inactive' | 'recording' = 'inactive';
+      stream: MediaStream;
+      dataAvailableHandler: ((event: { data: Blob }) => void) | null = null;
       
-      constructor() {
-        this.addEventListener = (event, handler) => {
-          if (event === 'dataavailable') {
-            // Store the handler for later use
-            this.dataAvailableHandler = handler;
-          }
-        };
+      constructor(stream: MediaStream) {
+        this.stream = stream;
       }
       
-      dataAvailableHandler = null;
-      
-      start = () => {
+      start(): void {
         mockStart();
         this.state = 'recording';
-      };
+      }
       
-      stop = () => {
+      stop(): void {
         mockStop();
         this.state = 'inactive';
         
         // Simulate data available event
-        if (this.dataAvailableHandler) {
+        if (this.dataAvailableHandler !== null) {
           setTimeout(() => {
-            this.dataAvailableHandler({ data: new Blob() });
+            if (this.dataAvailableHandler !== null) {
+              this.dataAvailableHandler({ data: new Blob() });
+            }
           }, 10);
         }
-      };
+      }
       
-      addEventListener = mockAddEventListener;
+      addEventListener(event: string, handler: (event: { data: Blob }) => void): void {
+        mockAddEventListener(event, handler);
+        if (event === 'dataavailable') {
+          this.dataAvailableHandler = handler;
+        }
+      }
     }
     
     (window as any).MediaRecorder = MockMediaRecorder;

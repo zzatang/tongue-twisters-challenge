@@ -52,12 +52,21 @@ export default function PracticePage({ params }: { params: { id: string } }) {
     fetchTongueTwister();
   }, [params.id, router]);
 
-  const handleRecordingComplete = async (audioBlob: Blob) => {
+  const handleRecordingComplete = async (audioData: string) => {
     setIsAnalyzing(true);
     setFeedback(null);
     setError(null);
 
     try {
+      // Convert base64 string to Blob for API call
+      const byteCharacters = atob(audioData);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const audioBlob = new Blob([byteArray], { type: 'audio/webm' });
+      
       const result = await analyzeSpeech(audioBlob, params.id);
 
       if (!result.success || !result.result) {
