@@ -239,6 +239,7 @@ export interface BadgeProgress {
 }
 
 export interface UserProgress {
+  id: string;
   user_id: string;
   practice_frequency: {
     daily: { [key: string]: number };

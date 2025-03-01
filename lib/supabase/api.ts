@@ -25,15 +25,26 @@ export async function getTongueTwisterById(id: string): Promise<TongueTwister> {
 }
 
 export async function getUserProgress(userId: string): Promise<UserProgress> {
-  // First check if the user exists
-  const { data: existingUser, error: checkError } = await supabase
-    .from('user_progress')
-    .select('user_id')
-    .eq('user_id', userId)
-    .maybeSingle();
+  try {
+    // First check if the user exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('user_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-  if (!existingUser) {
+    if (checkError) {
+      console.error('Error checking user progress:', checkError);
+      throw checkError;
+    }
+
+    if (existingUser) {
+      // User exists, return their data
+      return existingUser;
+    }
+
     // User doesn't exist, create a new record
+    const currentDate = new Date().toISOString();
     const { data: newData, error: createError } = await supabase
       .from('user_progress')
       .insert([
@@ -48,7 +59,9 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
           total_practice_time: 0,
           total_sessions: 0,
           practice_streak: 0,
-          badges: []
+          badges: [],
+          created_at: currentDate,
+          updated_at: currentDate
         }
       ])
       .select()
@@ -56,24 +69,47 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
 
     if (createError) {
       console.error('Error creating user progress:', createError);
+      
+      // If there's a conflict, try to fetch the user again (they might have been created in another request)
+      if (createError.code === '23505') { // PostgreSQL unique violation code
+        const { data: retryData, error: retryError } = await supabase
+          .from('user_progress')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+          
+        if (retryError) {
+          console.error('Error fetching user progress after conflict:', retryError);
+          throw retryError;
+        }
+        
+        return retryData;
+      }
+      
       throw createError;
     }
+    
     return newData;
+  } catch (error) {
+    console.error('Error in getUserProgress:', error);
+    // Return a default user progress object to prevent UI errors
+    return {
+      id: 'temp-' + userId,
+      user_id: userId,
+      practice_frequency: {
+        daily: {},
+        weekly: {},
+        monthly: {}
+      },
+      clarity_score: 0,
+      total_practice_time: 0,
+      total_sessions: 0,
+      practice_streak: 0,
+      badges: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
   }
-
-  // User exists, get their data
-  const { data, error } = await supabase
-    .from('user_progress')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-
-  if (error) {
-    console.error('Error fetching user progress:', error);
-    throw error;
-  }
-
-  return data;
 }
 
 export async function updateUserProgress(

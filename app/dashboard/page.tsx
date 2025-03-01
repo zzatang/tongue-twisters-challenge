@@ -59,26 +59,39 @@ export default function DashboardPage() {
         setError(null);
 
         // Fetch tongue twisters and user progress in parallel
-        const [twistersData, progressData] = await Promise.all([
+        const [twistersData, progressData] = await Promise.allSettled([
           getTongueTwisters(),
           getUserProgress(user.id)
         ]);
 
-        // Map the database tongue twisters to our local type
-        const mappedTwisters: TongueTwister[] = twistersData.map(twister => ({
-          id: twister.id,
-          text: twister.text,
-          difficulty: twister.difficulty as DifficultyLevel,
-          category: twister.category,
-          created_at: twister.created_at,
-          updated_at: twister.updated_at,
-          description: twister.description,
-          example_words: twister.example_words,
-          phonetic_focus: twister.phonetic_focus
-        }));
+        // Handle tongue twisters data
+        if (twistersData.status === 'fulfilled') {
+          // Map the database tongue twisters to our local type
+          const mappedTwisters: TongueTwister[] = twistersData.value.map(twister => ({
+            id: twister.id,
+            text: twister.text,
+            difficulty: twister.difficulty as DifficultyLevel,
+            category: twister.category,
+            created_at: twister.created_at,
+            updated_at: twister.updated_at,
+            description: twister.description,
+            example_words: twister.example_words,
+            phonetic_focus: twister.phonetic_focus
+          }));
 
-        setTongueTwisters(mappedTwisters);
-        setUserProgress(progressData);
+          setTongueTwisters(mappedTwisters);
+        } else {
+          console.error("Error fetching tongue twisters:", twistersData.reason);
+          setError("Failed to load tongue twisters. Please try again later.");
+        }
+
+        // Handle user progress data
+        if (progressData.status === 'fulfilled') {
+          setUserProgress(progressData.value);
+        } else {
+          console.error("Error fetching user progress:", progressData.reason);
+          // Don't set error here, as we can still show tongue twisters
+        }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
         setError("Failed to load dashboard data. Please try again later.");
