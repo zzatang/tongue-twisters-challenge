@@ -9,7 +9,7 @@ import {
     getErrorRedirect,
     calculateTrialEndUnixTimestamp
 } from '@/utils/helpers';
-import { Tables } from '@/types/database.types';
+import type { Tables } from '@/types/database.types';
 import { auth, currentUser } from '@clerk/nextjs/server';
 
 type Price = Tables<'prices'>;
@@ -19,29 +19,33 @@ export async function checkoutWithStripe(
     redirectPath: string = '/',
     referralId?: string,
     referral?: string
-) {
+): Promise<string | { errorRedirect: string }> {
+    if (!stripe) {
+        throw new Error('Stripe is not properly configured');
+    }
+
+    const [authResult, user] = await Promise.all([
+        auth(),
+        currentUser()
+    ]);
+
+    if (!authResult.userId || !user) {
+        throw new Error('User must be logged in to create a checkout session');
+    }
+
+    if (!user.primaryEmailAddress?.emailAddress) {
+        throw new Error('User must have a valid email address');
+    }
+
     try {
-        // Get the user from Supabase auth
-        const user = await currentUser()
-
-        if (referralId) {
-            console.log("checkout with referral id:", referralId)
-        }
-
-        if (!user) {
-            throw new Error('Could not get user session.');
-        }
-
         // Retrieve or create the customer in Stripe
-        let customer: string;
-        try {
-            customer = await createOrRetrieveCustomer({
-                uuid: user.id || '',
-                email: user?.primaryEmailAddress?.emailAddress || '',
-                referral: referralId
-            });
-        } catch (err) {
-            console.error(err);
+        const customerId = await createOrRetrieveCustomer({
+            uuid: authResult.userId,
+            email: user.primaryEmailAddress.emailAddress,
+            referral: referralId
+        });
+
+        if (!customerId) {
             throw new Error('Unable to access customer record.');
         }
 
@@ -55,7 +59,7 @@ export async function checkoutWithStripe(
         let params: Stripe.Checkout.SessionCreateParams = {
             allow_promotion_codes: true,
             billing_address_collection: 'required',
-            customer,
+            customer: customerId,
             customer_update: {
                 address: 'auto'
             },
@@ -90,6 +94,9 @@ export async function checkoutWithStripe(
         // Create a checkout session in Stripe
         let session: Stripe.Checkout.Session
         try {
+            if (!stripe) {
+                throw new Error('Stripe is not properly configured');
+            }
             session = await stripe.checkout.sessions.create(params);
         } catch (err) {
             console.error(err);
@@ -98,7 +105,7 @@ export async function checkoutWithStripe(
 
         // Instead of returning a Response, just return the data or error.
         if (session) {
-            return session
+            return session.id
         } else {
             throw new Error('Unable to create checkout session.');
         }
@@ -138,9 +145,9 @@ export async function createStripePortal(currentPath: string) {
             throw new Error('Could not get user session.');
         }
 
-        let customer;
+        let customerId;
         try {
-            customer = await createOrRetrieveCustomer({
+            customerId = await createOrRetrieveCustomer({
                 uuid: user.id || '',
                 email: user.email || ''
             });
@@ -149,13 +156,16 @@ export async function createStripePortal(currentPath: string) {
             throw new Error('Unable to access customer record.');
         }
 
-        if (!customer) {
+        if (!customerId) {
             throw new Error('Could not get customer.');
         }
 
         try {
+            if (!stripe) {
+                throw new Error('Stripe is not properly configured');
+            }
             const { url } = await stripe.billingPortal.sessions.create({
-                customer,
+                customer: customerId,
                 return_url: getURL('/account')
             });
             if (!url) {
@@ -184,22 +194,27 @@ export async function createStripePortal(currentPath: string) {
     }
 }
 
-
 export async function createBillingPortalSession() {
     try {
-        const user = await currentUser()
+        const [authResult, user] = await Promise.all([
+            auth(),
+            currentUser()
+        ]);
 
-        if (!user) {
+        if (!authResult.userId || !user) {
             throw new Error("No User")
         }
 
-        const { data: customer, error } = await supabaseAdmin.from("customers").select("*").eq("id", user.id).maybeSingle()
+        const { data: customer, error } = await supabaseAdmin.from("customers").select("*").eq("id", authResult.userId).maybeSingle()
 
         if (error) {
             throw error
         }
 
         // Create a billing portal session
+        if (!stripe) {
+            throw new Error('Stripe is not properly configured');
+        }
         const session = await stripe.billingPortal.sessions.create({
             customer: customer?.stripe_customer_id!,
             return_url: getURL('/settings'), // URL to redirect after the session

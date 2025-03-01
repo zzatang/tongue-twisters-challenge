@@ -22,6 +22,10 @@ const relevantEvents = new Set([
 ]);
 
 export async function POST(req: Request) {
+  if (!stripe) {
+    return new Response('Stripe is not configured', { status: 500 });
+  }
+
   const body = await req.text();
   const sig = req.headers.get('stripe-signature') as string;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

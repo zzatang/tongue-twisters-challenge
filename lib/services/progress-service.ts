@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { BadgeProgress } from '@/lib/supabase/types';
-import { PostgrestError } from '@supabase/supabase-js';
+import type { PostgrestError } from '@supabase/supabase-js';
 
 type PracticeFrequency = {
   daily: { [key: string]: number };
@@ -117,71 +117,62 @@ export async function updateUserProgress(
   clarityScore: number
 ): Promise<BadgeProgress> {
   try {
-    // First, try to get existing user progress
-    const { data: existingProgress, error: fetchError } = await supabaseAdmin
+    // Round all numeric values to integers
+    const roundedDuration = Math.round(duration);
+    const roundedClarityScore = Math.round(clarityScore);
+    
+    // Update practice frequency first
+    const updatedFrequency = await updatePracticeFrequency(userId);
+    
+    // Get current progress
+    const { data: currentProgress, error: fetchError } = await supabaseAdmin
       .from('user_progress')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
+    if (fetchError) {
+      console.error('Error fetching current progress:', fetchError);
       throw fetchError;
     }
 
-    // Initialize or update practice frequency
-    const practice_frequency = await updatePracticeFrequency(userId);
+    // Calculate new values (ensure all are integers)
+    const totalPracticeTime = Math.round((currentProgress?.total_practice_time || 0) + roundedDuration);
+    const totalSessions = Math.round((currentProgress?.total_sessions || 0) + 1);
+    const practiceStreak = Math.round(calculatePracticeStreak(updatedFrequency));
+    
+    // Calculate new average clarity score (ensure integer)
+    const currentTotalScore = Math.round((currentProgress?.clarity_score || 0) * (totalSessions - 1));
+    const newAverageClarityScore = Math.round((currentTotalScore + roundedClarityScore) / totalSessions);
 
-    // Calculate practice streak
-    const practice_streak = calculatePracticeStreak(practice_frequency);
+    // Update user progress
+    const { error: updateError } = await supabaseAdmin
+      .from('user_progress')
+      .update({
+        practice_frequency: updatedFrequency,
+        clarity_score: newAverageClarityScore,
+        total_practice_time: totalPracticeTime,
+        total_sessions: totalSessions,
+        practice_streak: practiceStreak,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
 
-    // Initialize new progress if none exists
-    if (!existingProgress) {
-      const { error: insertError } = await supabaseAdmin
-        .from('user_progress')
-        .insert([
-          {
-            user_id: userId,
-            practice_frequency,
-            practice_streak,
-            total_practice_time: duration,
-            total_sessions: 1,
-            clarity_score: clarityScore,
-            badges: []
-          }
-        ]);
-
-      if (insertError) throw insertError;
-    } else {
-      // Update existing progress
-      const newTotalTime = (existingProgress.total_practice_time || 0) + duration;
-      const newTotalSessions = (existingProgress.total_sessions || 0) + 1;
-      const oldClarityScore = existingProgress.clarity_score || 0;
-      const newClarityScore = (oldClarityScore * (newTotalSessions - 1) + clarityScore) / newTotalSessions;
-
-      const { error: updateError } = await supabaseAdmin
-        .from('user_progress')
-        .update({
-          practice_frequency,
-          practice_streak,
-          total_practice_time: newTotalTime,
-          total_sessions: newTotalSessions,
-          clarity_score: newClarityScore
-        })
-        .eq('user_id', userId);
-
-      if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Error updating user progress:', updateError);
+      throw updateError;
     }
 
-    // Return badge progress data
+    // Return badge progress data with camelCase fields
     const badgeProgress: BadgeProgress = {
-      practice_streak,
-      total_practice_time: existingProgress?.total_practice_time || duration,
-      total_sessions: existingProgress?.total_sessions || 1,
-      clarity_score: clarityScore,
-      practice_frequency,
-      user_id: userId,
-      created_at: existingProgress?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      practiceStreak,
+      totalPracticeTime,
+      totalSessions,
+      clarityScore: roundedClarityScore,
+      practiceFrequency: updatedFrequency,
+      userId,
+      createdAt: currentProgress?.created_at || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     return badgeProgress;
   } catch (error) {

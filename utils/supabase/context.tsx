@@ -1,8 +1,11 @@
 "use client"
 
+import { createContext, useContext, useMemo } from "react";
+import type { ReactNode } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import { useSession } from "@clerk/nextjs";
-import { SupabaseClient, createClient } from "@supabase/supabase-js";
-import { createContext, useContext, useMemo, ReactNode } from "react";
+import type { Database } from "@/types/database.types";
 
 const SupabaseContext = createContext<SupabaseClient | undefined>(undefined);
 
