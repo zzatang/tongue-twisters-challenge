@@ -3,6 +3,50 @@ interface PronunciationResult {
   feedback: string[];
 }
 
+interface SpeechAnalysisResult {
+  clarity: number;
+  mispronounced: string[];
+  tips: string[];
+}
+
+/**
+ * Analyze speech audio data against an expected tongue twister text
+ * 
+ * @param audioData - Base64 encoded audio data
+ * @param expectedText - The original tongue twister text to compare against
+ * @returns Object containing clarity score, mispronounced words, and improvement tips
+ */
+export async function analyzeSpeech(
+  audioData: string,
+  expectedText: string
+): Promise<SpeechAnalysisResult> {
+  try {
+    // In a real implementation, this would send the audio to Google Speech-to-Text API
+    // For testing purposes, we'll simulate a response
+    
+    // Simulate recognized text (in production, this would come from the API)
+    const recognizedText = expectedText; // Perfect match for testing
+    
+    // Calculate pronunciation score using our existing function
+    const { score, feedback } = calculatePronunciationScore(recognizedText, expectedText);
+    
+    // Identify potentially mispronounced words (simplified for testing)
+    const mispronounced = expectedText
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(() => Math.random() < 0.2); // Randomly select ~20% of words as "mispronounced"
+    
+    return {
+      clarity: score,
+      mispronounced: mispronounced.length ? mispronounced : [],
+      tips: feedback,
+    };
+  } catch (error) {
+    console.error('Speech analysis error:', error);
+    throw new Error('Failed to analyze speech');
+  }
+}
+
 /**
  * Calculate a pronunciation score and generate feedback by comparing the recognized text
  * with the expected tongue twister text.

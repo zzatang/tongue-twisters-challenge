@@ -1,18 +1,39 @@
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
-import { NextRequest, NextResponse } from 'next/server';
 import { POST } from '@/app/api/speech/analyze/route';
 import { getTongueTwisterById } from '@/lib/supabase/api';
 import { analyzeSpeech } from '@/lib/speech/pronunciation';
-import 'whatwg-fetch';
+
+// Mock dependencies
+jest.mock('@/lib/supabase/api', () => ({
+  getTongueTwisterById: jest.fn()
+}));
+
+jest.mock('@/lib/speech/pronunciation', () => ({
+  analyzeSpeech: jest.fn()
+}));
+
+// Mock console.error to prevent test output pollution
+jest.spyOn(console, 'error').mockImplementation(() => {});
+
+// Mock NextResponse
+jest.mock('next/server', () => {
+  return {
+    NextRequest: function() {
+      return {};
+    },
+    NextResponse: {
+      json: (data, options) => ({
+        status: options?.status || 200,
+        json: async () => data
+      })
+    }
+  };
+});
 
 // Mock the auth wrapper
 jest.mock('@/lib/auth/clerk', () => ({
-  withAuth: (handler: Function) => handler,
+  withAuth: (handler) => handler
 }));
-
-// Mock dependencies
-jest.mock('@/lib/supabase/api');
-jest.mock('@/lib/speech/pronunciation');
 
 describe('Speech Analysis API', () => {
   beforeEach(() => {
@@ -20,93 +41,103 @@ describe('Speech Analysis API', () => {
   });
 
   it('successfully analyzes speech', async () => {
-    const mockRequest = new Request('http://localhost:3000/api/speech/analyze', {
-      method: 'POST',
-      body: JSON.stringify({
+    // Setup mocks
+    const mockRequest = {
+      json: async () => ({
         audioData: 'base64-audio-data',
-        tongueTwisterId: '123',
-      }),
-    }) as unknown as NextRequest;
+        tongueTwisterId: '123'
+      })
+    };
 
     (getTongueTwisterById as jest.Mock).mockResolvedValue({
       id: '123',
-      text: 'She sells seashells',
+      text: 'She sells seashells'
     });
 
     (analyzeSpeech as jest.Mock).mockResolvedValue({
       clarity: 85,
       mispronounced: ['sells'],
-      tips: ['Focus on the "s" sound'],
+      tips: ['Focus on the "s" sound']
     });
 
-    const response = await POST(mockRequest);
+    // Call the API route handler
+    const response = await POST(mockRequest as any);
     const data = await response.json();
 
+    // Assertions
     expect(response.status).toBe(200);
     expect(data).toEqual({
       clarity: 85,
       mispronounced: ['sells'],
-      tips: ['Focus on the "s" sound'],
+      tips: ['Focus on the "s" sound']
     });
+    expect(getTongueTwisterById).toHaveBeenCalledWith('123');
+    expect(analyzeSpeech).toHaveBeenCalledWith('base64-audio-data', 'She sells seashells');
   });
 
   it('handles missing request body', async () => {
-    const mockRequest = new Request('http://localhost:3000/api/speech/analyze', {
-      method: 'POST',
-      body: JSON.stringify({}),
-    }) as unknown as NextRequest;
+    // Setup mocks
+    const mockRequest = {
+      json: async () => ({})
+    };
 
-    const response = await POST(mockRequest);
+    // Call the API route handler
+    const response = await POST(mockRequest as any);
     const data = await response.json();
 
+    // Assertions
     expect(response.status).toBe(400);
     expect(data).toEqual({
-      error: 'Missing required fields',
+      error: 'Missing required fields'
     });
   });
 
-  it('handles non-existent tongue twister', async () => {
-    const mockRequest = new Request('http://localhost:3000/api/speech/analyze', {
-      method: 'POST',
-      body: JSON.stringify({
+  it('handles tongue twister not found', async () => {
+    // Setup mocks
+    const mockRequest = {
+      json: async () => ({
         audioData: 'base64-audio-data',
-        tongueTwisterId: '123',
-      }),
-    }) as unknown as NextRequest;
+        tongueTwisterId: 'non-existent'
+      })
+    };
 
-    (getTongueTwisterById as jest.Mock).mockRejectedValue(new Error('Tongue twister not found'));
+    (getTongueTwisterById as jest.Mock).mockResolvedValue(null);
 
-    const response = await POST(mockRequest);
+    // Call the API route handler
+    const response = await POST(mockRequest as any);
     const data = await response.json();
 
+    // Assertions
     expect(response.status).toBe(404);
     expect(data).toEqual({
-      error: 'Tongue twister not found',
+      error: 'Tongue twister not found'
     });
   });
 
   it('handles speech analysis error', async () => {
-    const mockRequest = new Request('http://localhost:3000/api/speech/analyze', {
-      method: 'POST',
-      body: JSON.stringify({
+    // Setup mocks
+    const mockRequest = {
+      json: async () => ({
         audioData: 'base64-audio-data',
-        tongueTwisterId: '123',
-      }),
-    }) as unknown as NextRequest;
+        tongueTwisterId: '123'
+      })
+    };
 
     (getTongueTwisterById as jest.Mock).mockResolvedValue({
       id: '123',
-      text: 'She sells seashells',
+      text: 'She sells seashells'
     });
 
     (analyzeSpeech as jest.Mock).mockRejectedValue(new Error('Analysis failed'));
 
-    const response = await POST(mockRequest);
+    // Call the API route handler
+    const response = await POST(mockRequest as any);
     const data = await response.json();
 
+    // Assertions
     expect(response.status).toBe(500);
     expect(data).toEqual({
-      error: 'Failed to analyze speech',
+      error: 'Failed to analyze speech'
     });
   });
 });

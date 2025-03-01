@@ -1,5 +1,5 @@
 import { supabase } from './client';
-import type { TongueTwister, UserProgress } from './types';
+import type { TongueTwister, UserProgress, Badge } from './types';
 import type { Database } from './database.types';
 
 export async function getTongueTwisters(): Promise<TongueTwister[]> {
@@ -132,4 +132,41 @@ export async function recordPracticeSession(
     .eq('user_id', userId);
 
   if (updateError) throw updateError;
+}
+
+/**
+ * Get all available badges from the database
+ * @returns Array of Badge objects
+ */
+export async function getAllBadges(): Promise<Badge[]> {
+  const { data, error } = await supabase
+    .from('badges')
+    .select('*')
+    .order('criteria_value', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching badges:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+/**
+ * Get badges earned by a specific user
+ * @param userId - The user's ID
+ * @returns Array of badge IDs earned by the user
+ */
+export async function getUserBadges(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .select('badge_id')
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error fetching user badges:', error);
+    return [];
+  }
+
+  return (data || []).map(ub => ub.badge_id);
 }
