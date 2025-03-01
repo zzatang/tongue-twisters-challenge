@@ -223,19 +223,19 @@ export type TongueTwister = {
   phonetic_focus?: string[];
 };
 
-export type BadgeProgress = {
-  practice_streak: number;
-  total_practice_time: number;
-  total_sessions: number;
-  clarity_score: number;
-  practice_frequency: {
+export interface BadgeProgress {
+  practiceStreak: number;
+  totalPracticeTime: number;
+  totalSessions: number;
+  clarityScore: number;
+  practiceFrequency: {
     daily: { [key: string]: number };
     weekly: { [key: string]: number };
     monthly: { [key: string]: number };
   };
-  created_at?: string | null;
-  updated_at?: string | null;
-  user_id: string;
+  userId: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface UserProgress {

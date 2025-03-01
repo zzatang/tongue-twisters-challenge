@@ -28,7 +28,7 @@ export function calculatePronunciationScore(
   ).length;
 
   // Calculate base score (0-100)
-  const score = Math.round((correctWords / expectedWords.length) * 100);
+  const score = Math.floor((correctWords / expectedWords.length) * 100 + 0.5);
 
   // Generate feedback based on score and specific patterns
   const feedback: string[] = [];

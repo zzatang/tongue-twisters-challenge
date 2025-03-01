@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import type { Badge, UserBadge, BadgeProgress } from '@/lib/supabase/types';
 
-type ProgressMetric = keyof Omit<BadgeProgress, 'practice_frequency' | 'created_at' | 'updated_at' | 'user_id'>;
+type ProgressMetric = keyof Pick<BadgeProgress, 'practiceStreak' | 'totalPracticeTime' | 'totalSessions' | 'clarityScore'>;
 
 interface BadgeCriteria {
   type: ProgressMetric;
@@ -9,7 +9,8 @@ interface BadgeCriteria {
 }
 
 function checkBadgeCriteria(progress: BadgeProgress, criteria: BadgeCriteria): boolean {
-  return progress[criteria.type] >= criteria.value;
+  const value = progress[criteria.type];
+  return typeof value === 'number' && value >= criteria.value;
 }
 
 export async function checkAndAwardBadges(userId: string, progress: BadgeProgress): Promise<void> {

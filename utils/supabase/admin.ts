@@ -107,6 +107,9 @@ const deletePriceRecord = async (price: Stripe.Price) => {
 };
 
 const upsertCustomerToSupabase = async (uuid: string, customerId: string) => {
+    if (!stripe) {
+        throw new Error('Stripe is not properly configured');
+    }
     const { error: upsertError } = await supabaseAdmin
         .from('customers')
         .upsert([{ id: uuid, stripe_customer_id: customerId }]);
@@ -118,87 +121,70 @@ const upsertCustomerToSupabase = async (uuid: string, customerId: string) => {
 };
 
 const createCustomerInStripe = async (uuid: string, email: string, referral?: string) => {
-    const customerData: Stripe.CustomerCreateParams = { metadata: { supabaseUUID: uuid, referral: referral || null }, email: email };
+    if (!stripe) {
+        throw new Error('Stripe is not properly configured');
+    }
+    const customerData: Stripe.CustomerCreateParams = { 
+        metadata: { 
+            supabaseUUID: uuid, 
+            referral: referral || null 
+        }, 
+        email: email 
+    };
     const newCustomer = await stripe.customers.create(customerData);
     if (!newCustomer) throw new Error('Stripe customer creation failed.');
-
     return newCustomer.id;
 };
 
 const createOrRetrieveCustomer = async ({
-    email,
     uuid,
+    email,
     referral
 }: {
-    email: string;
     uuid: string;
-    referral?: string
-}) => {
-    // Check if the customer already exists in Supabase
-    const { data: existingSupabaseCustomer, error: queryError } =
-        await supabaseAdmin
-            .from('customers')
-            .select('*')
-            .eq('id', uuid)
-            .maybeSingle();
-
-    if (queryError) {
-        throw new Error(`Supabase customer lookup failed: ${queryError.message}`);
+    email: string;
+    referral?: string;
+}): Promise<string> => {
+    if (!stripe) {
+        throw new Error('Stripe is not properly configured');
     }
 
-    // Retrieve the Stripe customer ID using the Supabase customer ID, with email fallback
+    // Check if the customer already exists in Supabase
+    const { data: existingSupabaseCustomer } = await supabaseAdmin
+        .from('customers')
+        .select('*')
+        .eq('id', uuid)
+        .single();
+
     let stripeCustomerId: string | undefined;
     if (existingSupabaseCustomer?.stripe_customer_id) {
         const existingStripeCustomer = await stripe.customers.retrieve(
             existingSupabaseCustomer.stripe_customer_id
         );
         stripeCustomerId = existingStripeCustomer.id;
-    } else {
-        // If Stripe ID is missing from Supabase, try to retrieve Stripe customer ID by email
+    }
+
+    // If no customer was found in Supabase, create a new one in Stripe
+    if (!stripeCustomerId) {
+        // Check if customer with this email already exists in Stripe
         const stripeCustomers = await stripe.customers.list({ email: email });
-        stripeCustomerId =
-            stripeCustomers.data.length > 0 ? stripeCustomers.data[0].id : undefined;
-    }
-
-    // If still no stripeCustomerId, create a new customer in Stripe
-    const stripeIdToInsert = stripeCustomerId
-        ? stripeCustomerId
-        : await createCustomerInStripe(uuid, email, referral);
-    if (!stripeIdToInsert) throw new Error('Stripe customer creation failed.');
-
-    if (existingSupabaseCustomer && stripeCustomerId) {
-        // If Supabase has a record but doesn't match Stripe, update Supabase record
-        if (existingSupabaseCustomer.stripe_customer_id !== stripeCustomerId) {
-            const { error: updateError } = await supabaseAdmin
-                .from('customers')
-                .update({ stripe_customer_id: stripeCustomerId })
-                .eq('id', uuid);
-
-            if (updateError)
-                throw new Error(
-                    `Supabase customer record update failed: ${updateError.message}`
-                );
-            console.warn(
-                `Supabase customer record mismatched Stripe ID. Supabase record updated.`
-            );
+        if (stripeCustomers.data.length > 0) {
+            const existingStripeCustomer = stripeCustomers.data[0];
+            stripeCustomerId = existingStripeCustomer.id;
+            // Link the existing Stripe customer to Supabase
+            await upsertCustomerToSupabase(uuid, stripeCustomerId);
+        } else {
+            // Create a new customer in Stripe and link to Supabase
+            stripeCustomerId = await createCustomerInStripe(uuid, email, referral);
+            await upsertCustomerToSupabase(uuid, stripeCustomerId);
         }
-        // If Supabase has a record and matches Stripe, return Stripe customer ID
-        return stripeCustomerId;
-    } else {
-        console.warn(
-            `Supabase customer record was missing. A new record was created.`
-        );
-
-        // If Supabase has no record, create a new record and return Stripe customer ID
-        const upsertedStripeCustomer = await upsertCustomerToSupabase(
-            uuid,
-            stripeIdToInsert
-        );
-        if (!upsertedStripeCustomer)
-            throw new Error('Supabase customer record creation failed.');
-
-        return upsertedStripeCustomer;
     }
+
+    if (!stripeCustomerId) {
+        throw new Error('Failed to create or retrieve Stripe customer');
+    }
+
+    return stripeCustomerId;
 };
 
 /**
@@ -208,6 +194,9 @@ const copyBillingDetailsToCustomer = async (
     uuid: string,
     payment_method: Stripe.PaymentMethod
 ) => {
+    if (!stripe) {
+        throw new Error('Stripe is not properly configured');
+    }
     //Todo: check this assertion
     const customer = payment_method.customer as string;
     const { name, phone, address } = payment_method.billing_details;
@@ -221,6 +210,10 @@ const manageSubscriptionStatusChange = async (
     customerId: string,
     createAction = false
 ) => {
+    if (!stripe) {
+        throw new Error('Stripe is not properly configured');
+    }
+
     // Get customer's UUID from mapping table.
     const { data: customerData, error: noCustomerError } = await supabaseAdmin
         .from('customers')

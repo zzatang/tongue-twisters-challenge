@@ -1,19 +1,20 @@
 import { OpenAI } from "openai";
-import { ChatCompletionCreateParamsBase, ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import type { ChatCompletionCreateParamsBase, ChatCompletionMessageParam, ChatCompletionMessage, ChatCompletionToolChoiceOption, ChatCompletionTool, ChatCompletion } from "openai/resources/chat/completions";
 
 interface GenerateCompletionArgs {
     chat: ChatCompletionMessageParam[];
+    temperature?: number;
     maxTokens?: number;
-    onComplete?: (data: OpenAI.Chat.Completions.ChatCompletion) => void;
+    model?: ChatCompletionCreateParamsBase["model"];
+    onComplete?: (data: ChatCompletion) => void;
     responseFormatType?: ChatCompletionCreateParamsBase['response_format'];
-    model?: OpenAI.Chat.ChatModel;
     toolParams?: {
-        toolsChoice?: OpenAI.Chat.Completions.ChatCompletionToolChoiceOption;
-        tools: OpenAI.Chat.Completions.ChatCompletionTool[];
+        toolsChoice?: ChatCompletionToolChoiceOption;
+        tools: ChatCompletionTool[];
     };
 }
 
-type CompletionResult = string | OpenAI.Chat.Completions.ChatCompletionMessage & { reasoning_content: string };
+type CompletionResult = string | ChatCompletionMessage & { reasoning_content: string };
 
 /**
  * Generate a completion using OpenAI API
