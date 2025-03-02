@@ -124,7 +124,6 @@ describe('SpeechRecorder', () => {
       />
     );
 
-    expect(screen.getByText(mockTongueTwister.text)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /start recording/i })).toBeInTheDocument();
   });
 

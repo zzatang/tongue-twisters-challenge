@@ -51,7 +51,6 @@ export function SpeechRecorder({ tongueTwister, onRecordingComplete }: SpeechRec
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <div className="text-lg font-medium mb-2">{tongueTwister.text}</div>
       <Button
         className="w-full max-w-xs"
         onClick={isRecording ? stopRecording : startRecording}
