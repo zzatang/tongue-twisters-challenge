@@ -15,7 +15,7 @@ Test ID,Test Category,Test Case,Steps,Expected Result,Performance Target,Browser
 2. Wait for dashboard to load",Dashboard loads with all components (progress metrics~ badges~ tongue twister categories),< 2 seconds for complete load,,03/03/25,AT,Pass,,"Fixed dashboard loading issue after signup and clarity score display showing incorrect percentage (9200% instead of 92%)",Y
 2.1.2,Dashboard,Progress metrics display,Observe progress metrics section,"User's practice streak, time, weekly practice, and clarity score displayed correctly",N/A (part of dashboard load),,03/03/25,AT,Pass,,"Fixed clarity score display showing incorrect percentage (9200% instead of 92%)",Y
 2.2.1,Dashboard,Category filtering,"1. Click on different category filters
-2. Observe tongue twister tiles",Tiles filter correctly based on selected category,< 1 second for filter application,,,,,,,
+2. Observe tongue twister tiles",Tiles filter correctly based on selected category,< 1 second for filter application,,03/03/25,AT,Pass,,"Fixed issue with difficulty filtering not working when Easy, Intermediate, or Advanced buttons were clicked",Y
 2.2.2,Dashboard,Tongue twister selection,Click on a tongue twister tile,User redirected to practice page for selected tongue twister,< 2 seconds for navigation,,,,,,,
 3.1.1,Practice Session,Practice page load,Navigate to a specific tongue twister practice page,Page loads with tongue twister text and recording controls,< 2 seconds,,,,,,,
 3.1.2,Practice Session,Instructions display,Observe instructions section,Clear instructions for practice are displayed,N/A (part of page load),,,,,,,
