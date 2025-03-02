@@ -40,16 +40,26 @@ export const Feedback = ({ isLoading, feedback, error }: FeedbackProps) => {
         <CardHeader className="bg-red-50 text-red-700">
           <CardTitle className="flex items-center">
             <AlertCircle className="h-5 w-5 mr-2" />
-            Error
+            {error === "No speech detected. Please try again." ? "No Speech Detected" : "Error"}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="text-red-600 flex items-start">
             <XCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="font-medium">Failed to analyze speech</p>
-              <p className="text-sm mt-1">{error}</p>
-              <p className="text-sm mt-4">Please try again or try a different tongue twister.</p>
+              <p className="font-medium">{error}</p>
+              {feedback && feedback.tips && feedback.tips.length > 0 ? (
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium mb-2">Tips:</h3>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {feedback.tips.map((tip, index) => (
+                      <li key={index} className="text-sm">{tip}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-sm mt-4">Please try again or try a different tongue twister.</p>
+              )}
             </div>
           </div>
         </CardContent>

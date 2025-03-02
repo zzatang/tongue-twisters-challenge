@@ -46,10 +46,28 @@ export async function analyzeSpeech(
 
     // Make the request
     const [response] = await client.recognize(request);
-    const transcription = response.results?.[0];
+    
+    // Check if we have any results
+    if (!response.results || response.results.length === 0) {
+      // No speech detected
+      return {
+        text: '',
+        confidence: 0,
+        duration: 0,
+        wordTimings: [],
+      };
+    }
+    
+    const transcription = response.results[0];
 
     if (!transcription || !transcription.alternatives?.[0]) {
-      throw new Error('No transcription results');
+      // Return empty result instead of throwing
+      return {
+        text: '',
+        confidence: 0,
+        duration: 0,
+        wordTimings: [],
+      };
     }
 
     const result = transcription.alternatives[0];
@@ -73,7 +91,13 @@ export async function analyzeSpeech(
     };
   } catch (error) {
     console.error('Speech analysis error:', error);
-    throw error;
+    // Return a default result instead of throwing
+    return {
+      text: '',
+      confidence: 0,
+      duration: 0,
+      wordTimings: [],
+    };
   }
 }
 
@@ -84,6 +108,18 @@ export function calculatePronunciationScore(
   score: number;
   feedback: string[];
 } {
+  // If no speech was detected or text is empty
+  if (!result.text || result.text.trim() === '') {
+    return {
+      score: 0,
+      feedback: [
+        "No speech detected. Please speak clearly into your microphone.",
+        "Make sure your microphone is working properly.",
+        "Try speaking louder or closer to your microphone."
+      ]
+    };
+  }
+
   const expectedWords = expectedText.toLowerCase().split(/\s+/);
   const transcribedWords = result.text.toLowerCase().split(/\s+/);
   const feedback: string[] = [];
@@ -99,30 +135,36 @@ export function calculatePronunciationScore(
 
   // Calculate timing score
   const avgWordDuration = result.wordTimings.reduce(
-    (sum, timing) => sum + (timing.endTime - timing.startTime),
+    (sum, word) => sum + (word.endTime - word.startTime),
     0
-  ) / result.wordTimings.length;
+  ) / (result.wordTimings.length || 1);
 
-  // Generate feedback
-  if (wordMatchScore < 80) {
-    feedback.push('Try to pronounce each word more clearly');
-  }
-  if (confidenceScore < 70) {
-    feedback.push('Speak a bit more slowly and distinctly');
-  }
-  if (avgWordDuration > 0.5) {
-    feedback.push('Try to maintain a steady, natural speaking pace');
-  }
-
-  // Calculate final score (weighted average)
-  const finalScore = (
-    wordMatchScore * 0.5 +
-    confidenceScore * 0.3 +
-    Math.min(100, (1 - avgWordDuration) * 100) * 0.2
+  // Combine scores with appropriate weights
+  const score = Math.min(
+    100,
+    Math.max(
+      0,
+      Math.round(wordMatchScore * 0.7 + confidenceScore * 0.3)
+    )
   );
 
-  return {
-    score: Math.round(finalScore),
-    feedback,
-  };
+  // Generate feedback based on score
+  if (score < 30) {
+    feedback.push("Try speaking more slowly and clearly.");
+    feedback.push("Focus on pronouncing each word distinctly.");
+  } else if (score < 60) {
+    feedback.push("Good effort! Try to enunciate each syllable more clearly.");
+  } else if (score < 80) {
+    feedback.push("Very good! Keep practicing to perfect your pronunciation.");
+  } else {
+    feedback.push("Excellent pronunciation! Try increasing your speed.");
+  }
+
+  // Add specific feedback on missed words
+  const missedWords = expectedWords.filter(word => !transcribedWords.includes(word));
+  if (missedWords.length > 0) {
+    feedback.push(`Focus on pronouncing: ${missedWords.slice(0, 3).join(', ')}${missedWords.length > 3 ? '...' : ''}`);
+  }
+
+  return { score, feedback };
 }

@@ -1,3 +1,5 @@
+import { analyzeSpeech as googleAnalyzeSpeech, calculatePronunciationScore as googleCalculateScore } from './google-speech';
+
 interface PronunciationResult {
   score: number;
   feedback: string[];
@@ -21,20 +23,39 @@ export async function analyzeSpeech(
   expectedText: string
 ): Promise<SpeechAnalysisResult> {
   try {
-    // In a real implementation, this would send the audio to Google Speech-to-Text API
-    // For testing purposes, we'll simulate a response
+    // Convert base64 to Buffer for Google Speech API
+    const audioBuffer = Buffer.from(audioData, 'base64');
     
-    // Simulate recognized text (in production, this would come from the API)
-    const recognizedText = expectedText; // Perfect match for testing
+    // Call Google Speech-to-Text API
+    const googleResult = await googleAnalyzeSpeech(audioBuffer);
     
-    // Calculate pronunciation score using our existing function
-    const { score, feedback } = calculatePronunciationScore(recognizedText, expectedText);
+    // If no speech was detected (empty text)
+    if (!googleResult.text || googleResult.text.trim() === '') {
+      return {
+        clarity: 0,
+        mispronounced: [],
+        tips: [
+          "No speech detected. Please speak clearly into your microphone.",
+          "Make sure your microphone is working properly.",
+          "Try speaking louder or closer to your microphone."
+        ]
+      };
+    }
     
-    // Identify potentially mispronounced words (simplified for testing)
-    const mispronounced = expectedText
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(() => Math.random() < 0.2); // Randomly select ~20% of words as "mispronounced"
+    // Calculate pronunciation score using Google's result
+    const { score, feedback } = googleCalculateScore(googleResult, expectedText);
+    
+    // Identify potentially mispronounced words by comparing with expected text
+    const expectedWords = expectedText.toLowerCase().split(/\s+/);
+    const recognizedWords = googleResult.text.toLowerCase().split(/\s+/);
+    
+    // Find words that are in expected but not in recognized (or with low confidence)
+    const mispronounced = expectedWords.filter(word => {
+      const matchingWord = googleResult.wordTimings.find(
+        timing => timing.word.toLowerCase() === word.toLowerCase()
+      );
+      return !matchingWord || matchingWord.confidence < 0.7;
+    });
     
     return {
       clarity: score,
@@ -43,7 +64,16 @@ export async function analyzeSpeech(
     };
   } catch (error) {
     console.error('Speech analysis error:', error);
-    throw new Error('Failed to analyze speech');
+    // Return a user-friendly error response instead of throwing
+    return {
+      clarity: 0,
+      mispronounced: [],
+      tips: [
+        "We couldn't analyze your speech. Please try again.",
+        "Make sure your microphone is properly connected and working.",
+        "Try speaking more clearly and directly into your microphone."
+      ]
+    };
   }
 }
 
@@ -96,21 +126,5 @@ export function calculatePronunciationScore(
     feedback.push("Try to maintain a steady pace without adding extra words.");
   }
 
-  // Check for repeated mistakes in specific sounds
-  const commonSoundPatterns = [
-    { pattern: /sh|ch|th/, message: "Pay attention to the 'sh/ch/th' sounds." },
-    { pattern: /s|z/, message: "Focus on clear 's' and 'z' sounds." },
-    { pattern: /r|l/, message: "Practice the 'r' and 'l' sounds carefully." },
-  ];
-
-  for (const { pattern, message } of commonSoundPatterns) {
-    if (pattern.test(expectedText) && !pattern.test(recognizedText)) {
-      feedback.push(message);
-    }
-  }
-
-  return {
-    score,
-    feedback: feedback.slice(0, 3), // Limit to top 3 most relevant feedback items
-  };
+  return { score, feedback };
 }

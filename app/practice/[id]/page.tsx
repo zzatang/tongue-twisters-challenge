@@ -72,6 +72,20 @@ export default function PracticePage({ params }: { params: { id: string } }) {
       console.log('Speech analysis result:', result);
 
       if (!result.success) {
+        // Special handling for "no speech detected" case
+        if (result.error === 'No speech detected' && result.result) {
+          // Show feedback with the tips for no speech detected
+          const noSpeechFeedback: FeedbackData = {
+            clarityScore: 0,
+            mispronunciations: [],
+            tips: result.result.feedback,
+          };
+          setFeedback(noSpeechFeedback);
+          setError("No speech detected. Please try again.");
+          return;
+        }
+        
+        // Handle other errors
         throw new Error(result.error || 'Failed to analyze speech');
       }
 
