@@ -67,10 +67,16 @@ export default function PracticePage({ params }: { params: { id: string } }) {
       const byteArray = new Uint8Array(byteNumbers);
       const audioBlob = new Blob([byteArray], { type: 'audio/webm' });
       
+      console.log('Calling analyzeSpeech with tongue twister ID:', params.id);
       const result = await analyzeSpeech(audioBlob, params.id);
+      console.log('Speech analysis result:', result);
 
-      if (!result.success || !result.result) {
+      if (!result.success) {
         throw new Error(result.error || 'Failed to analyze speech');
+      }
+
+      if (!result.result) {
+        throw new Error('No analysis results returned');
       }
 
       // Convert the API result to our FeedbackData format
@@ -151,7 +157,7 @@ export default function PracticePage({ params }: { params: { id: string } }) {
             </CardContent>
           </Card>
 
-          <Feedback isLoading={isAnalyzing} feedback={feedback} />
+          <Feedback isLoading={isAnalyzing} feedback={feedback} error={error} />
         </div>
       </main>
     </div>

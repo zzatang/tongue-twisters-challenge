@@ -15,9 +15,10 @@ interface FeedbackProps {
     }>;
     tips: string[];
   } | null;
+  error?: string | null;
 }
 
-export const Feedback = ({ isLoading, feedback }: FeedbackProps) => {
+export const Feedback = ({ isLoading, feedback, error }: FeedbackProps) => {
   if (isLoading) {
     return (
       <Card>
@@ -27,6 +28,29 @@ export const Feedback = ({ isLoading, feedback }: FeedbackProps) => {
         <CardContent>
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-red-200">
+        <CardHeader className="bg-red-50 text-red-700">
+          <CardTitle className="flex items-center">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="text-red-600 flex items-start">
+            <XCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium">Failed to analyze speech</p>
+              <p className="text-sm mt-1">{error}</p>
+              <p className="text-sm mt-4">Please try again or try a different tongue twister.</p>
+            </div>
           </div>
         </CardContent>
       </Card>

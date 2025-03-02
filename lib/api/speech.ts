@@ -30,6 +30,8 @@ export async function analyzeSpeech(
       reader.readAsDataURL(audioBlob);
     });
 
+    console.log('Sending audio data to API...');
+    
     const response = await fetch('/api/speech/analyze', {
       method: 'POST',
       headers: {
@@ -42,6 +44,7 @@ export async function analyzeSpeech(
     });
 
     const data = await response.json();
+    console.log('API response:', data);
 
     if (!response.ok) {
       throw new Error(data.error || 'Failed to analyze speech');
