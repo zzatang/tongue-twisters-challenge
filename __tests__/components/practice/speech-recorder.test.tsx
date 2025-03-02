@@ -63,7 +63,7 @@ describe('SpeechRecorder', () => {
   const mockTongueTwister: TongueTwister = {
     id: '1',
     text: 'Peter Piper picked a peck of pickled peppers',
-    difficulty: 1,
+    difficulty: 'Easy',
     category: 'P sounds',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

@@ -211,10 +211,10 @@ export type UserBadge = {
   earned_at: string | null;
 };
 
-export type TongueTwister = {
+export interface TongueTwister {
   id: string;
   text: string;
-  difficulty: number;
+  difficulty: 'Easy' | 'Intermediate' | 'Advanced';
   category: string;
   created_at: string | null;
   updated_at: string | null;

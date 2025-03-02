@@ -55,7 +55,7 @@ describe('Speech Analysis API', () => {
     const mockTongueTwister: TongueTwister = {
       id: '123',
       text: 'She sells seashells by the seashore',
-      difficulty: 2,
+      difficulty: 'Intermediate',
       category: 'S sounds',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -137,7 +137,7 @@ describe('Speech Analysis API', () => {
     const mockTongueTwister: TongueTwister = {
       id: '123',
       text: 'She sells seashells by the seashore',
-      difficulty: 2,
+      difficulty: 'Intermediate',
       category: 'S sounds',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
