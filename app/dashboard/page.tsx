@@ -10,24 +10,9 @@ import { getTongueTwisters, getUserProgress } from "@/lib/supabase/api";
 import type { UserProgress, TongueTwister as DbTongueTwister } from "@/lib/supabase/types";
 import { generateTitle } from "@/lib/utils/text";
 
-type DifficultyLevel = 1 | 2 | 3;
+// Update types to match database schema
+type DifficultyLevel = 'Easy' | 'Intermediate' | 'Advanced';
 type DifficultyFilter = 'All' | DifficultyLevel;
-
-const difficultyMap = {
-  1: 'Easy',
-  2: 'Intermediate',
-  3: 'Advanced'
-} as const;
-
-// Helper function to convert string difficulty to number
-const getDifficultyLevel = (difficulty: string): DifficultyLevel | null => {
-  switch (difficulty) {
-    case 'Easy': return 1;
-    case 'Intermediate': return 2;
-    case 'Advanced': return 3;
-    default: return null;
-  }
-};
 
 interface TongueTwister {
   id: string;
@@ -45,6 +30,13 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user } = useUser();
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>("All");
+  
+  // Handle difficulty change
+  const handleDifficultyChange = (difficulty: DifficultyFilter) => {
+    console.log('Setting difficulty to:', difficulty);
+    setSelectedDifficulty(difficulty);
+  };
+
   const [tongueTwisters, setTongueTwisters] = useState<TongueTwister[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,10 +97,11 @@ export default function DashboardPage() {
 
   const filteredTongueTwisters = tongueTwisters.filter(
     (twister) => {
+      console.log('Filtering twister:', twister.difficulty, 'Selected difficulty:', selectedDifficulty);
+      
       if (selectedDifficulty === "All") return true;
-      if (typeof selectedDifficulty === 'number') return twister.difficulty === selectedDifficulty;
-      const difficultyLevel = getDifficultyLevel(selectedDifficulty);
-      return difficultyLevel !== null && twister.difficulty === difficultyLevel;
+      
+      return twister.difficulty === selectedDifficulty;
     }
   );
 
@@ -153,7 +146,7 @@ export default function DashboardPage() {
                 <h2 className="text-xl font-semibold">Tongue Twisters</h2>
                 <DifficultyFilter
                   selectedDifficulty={selectedDifficulty}
-                  onDifficultyChange={setSelectedDifficulty}
+                  onDifficultyChange={handleDifficultyChange}
                 />
               </div>
 
@@ -163,7 +156,7 @@ export default function DashboardPage() {
                     key={twister.id}
                     title={generateTitle(twister.text)}
                     text={twister.text}
-                    difficulty={difficultyMap[twister.difficulty]}
+                    difficulty={twister.difficulty}
                     onClick={() => router.push(`/practice/${twister.id}`)}
                   />
                 ))}

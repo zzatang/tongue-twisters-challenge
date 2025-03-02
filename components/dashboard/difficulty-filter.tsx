@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type DifficultyLevel = 1 | 2 | 3;
+// Update types to match database schema
+type DifficultyLevel = 'Easy' | 'Intermediate' | 'Advanced';
 type DifficultyFilter = 'All' | DifficultyLevel;
 
 interface DifficultyFilterProps {
@@ -13,9 +14,9 @@ interface DifficultyFilterProps {
 
 const difficultyOptions: [DifficultyFilter, string][] = [
   ['All', 'All'],
-  [1, 'Easy'],
-  [2, 'Intermediate'],
-  [3, 'Advanced']
+  ['Easy', 'Easy'],
+  ['Intermediate', 'Intermediate'],
+  ['Advanced', 'Advanced']
 ];
 
 export function DifficultyFilter({
@@ -28,7 +29,10 @@ export function DifficultyFilter({
         <Button
           key={value}
           variant={selectedDifficulty === value ? "default" : "outline"}
-          onClick={() => onDifficultyChange(value)}
+          onClick={() => {
+            console.log('Clicking difficulty:', value);
+            onDifficultyChange(value);
+          }}
           className={cn(
             "px-3 py-1 rounded-full text-sm font-medium",
             selectedDifficulty === value
