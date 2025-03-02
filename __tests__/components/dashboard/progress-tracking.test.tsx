@@ -67,7 +67,7 @@ describe('ProgressTracking', () => {
       expect(screen.getByText('5 days')).toBeInTheDocument();
       expect(screen.getByText('2h')).toBeInTheDocument();
       expect(screen.getByText('3 sessions')).toBeInTheDocument();
-      expect(screen.getByText('8500%')).toBeInTheDocument();
+      expect(screen.getByText('85%')).toBeInTheDocument();
     });
   });
 

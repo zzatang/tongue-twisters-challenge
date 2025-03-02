@@ -379,6 +379,7 @@
         - Updated getUserProgress function to handle race conditions
         - Improved error handling in dashboard page to prevent UI failures
         - Added fallback data to ensure UI always renders even with API errors
+        - Fixed clarity score display showing incorrect percentage (9200% instead of 92%)
       - Improved performance of dashboard loading:
         - Implemented Promise.allSettled for parallel API calls
         - Added better error handling to show partial data when possible

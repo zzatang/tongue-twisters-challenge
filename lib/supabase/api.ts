@@ -101,7 +101,7 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
         weekly: {},
         monthly: {}
       },
-      clarity_score: 0,
+      clarity_score: 0, // 0-100 scale
       total_practice_time: 0,
       total_sessions: 0,
       practice_streak: 0,
@@ -158,7 +158,7 @@ export async function recordPracticeSession(
       weekly: practiceFrequency.weekly + 1,
       monthly: practiceFrequency.monthly + 1,
     },
-    clarity_score: (progress.clarity_score + clarityScore) / 2, // Rolling average
+    clarity_score: (progress.clarity_score + clarityScore) / 2, // Rolling average (both values are on the same scale 0-100)
     total_practice_time: progress.total_practice_time + duration,
   };
 

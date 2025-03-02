@@ -194,7 +194,9 @@ export function ProgressTracking({ metrics, userId: propUserId, className }: Pro
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(progress.clarity_score * 100)}%</div>
+            <div className="text-2xl font-bold">
+              {Math.round(progress.clarity_score)}%
+            </div>
           </CardContent>
         </Card>
       </div>
