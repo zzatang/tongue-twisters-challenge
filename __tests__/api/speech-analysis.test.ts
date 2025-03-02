@@ -73,13 +73,25 @@ describe('Speech Analysis API', () => {
     };
     (analyzeSpeech as jest.Mock).mockResolvedValue(mockAnalysisResult);
 
+    // Expected response format
+    const expectedResponse = {
+      success: true,
+      result: {
+        text: mockTongueTwister.text,
+        confidence: 0.9,
+        score: mockAnalysisResult.clarity,
+        feedback: mockAnalysisResult.tips,
+        wordTimings: []
+      }
+    };
+
     // Call the API
     const response = await POST(mockRequest);
 
     // Verify the response
     expect(response.status).toBe(200);
     const responseData = await response.json();
-    expect(responseData).toEqual(mockAnalysisResult);
+    expect(responseData).toEqual(expectedResponse);
 
     // Verify that the correct functions were called
     expect(getTongueTwisterById).toHaveBeenCalledWith('123');
@@ -100,7 +112,7 @@ describe('Speech Analysis API', () => {
     // Verify the response
     expect(response.status).toBe(500);
     const responseData = await response.json();
-    expect(responseData).toEqual({ error: 'Failed to analyze speech' });
+    expect(responseData).toEqual({ success: false, error: 'Failed to analyze speech' });
   });
 
   it('returns 404 if tongue twister is not found', async () => {
@@ -121,7 +133,7 @@ describe('Speech Analysis API', () => {
     // Verify the response
     expect(response.status).toBe(404);
     const responseData = await response.json();
-    expect(responseData).toEqual({ error: 'Tongue twister not found' });
+    expect(responseData).toEqual({ success: false, error: 'Tongue twister not found' });
   });
 
   it('returns 500 if speech analysis fails', async () => {
@@ -157,6 +169,6 @@ describe('Speech Analysis API', () => {
     // Verify the response
     expect(response.status).toBe(500);
     const responseData = await response.json();
-    expect(responseData).toEqual({ error: 'Failed to analyze speech' });
+    expect(responseData).toEqual({ success: false, error: 'Failed to process speech analysis' });
   });
 });
