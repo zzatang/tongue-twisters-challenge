@@ -75,10 +75,13 @@ export default function DashboardPage() {
         setIsLoading(true);
         setError(null);
 
+        // At this point, we've already checked that user is not null
+        const userId = user.id;
+
         // Fetch tongue twisters and user progress in parallel
         const [twistersData, progressData] = await Promise.allSettled([
           getTongueTwisters(),
-          getUserProgress(user.id)
+          getUserProgress(userId)
         ]);
 
         // Handle tongue twisters data
