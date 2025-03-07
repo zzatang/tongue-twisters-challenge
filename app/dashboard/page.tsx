@@ -46,7 +46,7 @@ interface Metrics {
 }
 
 export default function DashboardPage() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const router = useRouter();
   const [tongueTwisters, setTongueTwisters] = useState<TongueTwister[]>([]);
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
@@ -63,7 +63,12 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (!user) return;
+    // Only proceed if Clerk has loaded and we have a user
+    if (!isLoaded) return;
+    if (!user) {
+      router.push('/');
+      return;
+    }
 
     async function fetchData() {
       try {
@@ -113,7 +118,7 @@ export default function DashboardPage() {
     }
 
     fetchData();
-  }, [user]);
+  }, [user, isLoaded, router]);
 
   const filteredTongueTwisters = tongueTwisters.filter(
     (twister) => {
@@ -157,6 +162,25 @@ export default function DashboardPage() {
   };
 
   const metrics = calculateMetrics();
+
+  // Show loading state while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="animate-bounce mb-4">
+            <Music className="h-12 w-12 text-[hsl(var(--fun-purple))] mx-auto" />
+          </div>
+          <p className="text-xl font-bubblegum text-[hsl(var(--fun-purple))]">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect if no user (this is also handled in the useEffect)
+  if (!user) {
+    return null; // Will redirect in useEffect
+  }
 
   return (
     <div className="min-h-screen bg-fun-pattern">
