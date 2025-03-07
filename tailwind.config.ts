@@ -51,6 +51,14 @@ export default {
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))",
         },
+        // Fun theme colors for children
+        fun: {
+          blue: "hsl(var(--fun-blue))",
+          purple: "hsl(var(--fun-purple))",
+          pink: "hsl(var(--fun-pink))",
+          yellow: "hsl(var(--fun-yellow))",
+          green: "hsl(var(--fun-green))",
+        },
         // Sidebar-specific colors
         sidebar: {
           background: "hsl(var(--sidebar-background))",
@@ -68,13 +76,52 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(-5deg)' },
+          '75%': { transform: 'rotate(5deg)' },
+        },
+        'pop-in': {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '70%': { transform: 'scale(1.1)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+        bounce: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+        "wiggle": "wiggle 0.5s ease-in-out",
+        "pop-in": "pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
+        "float": "float 3s ease-in-out infinite",
+        "bounce": "bounce 2s ease-in-out infinite",
+      },
       fontFamily: {
         parkinsans: ["Parkinsans", "sans-serif"],
+        bubblegum: ['Bubblegum Sans', 'cursive'],
+        comic: ['Comic Neue', 'sans-serif'],
       },
     },
   },
   plugins: [
     require("@tailwindcss/forms"),
     require("@tailwindcss/typography"),
+    require("tailwindcss-animate"),
   ],
 } satisfies Config

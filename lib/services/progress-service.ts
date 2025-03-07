@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import type { BadgeProgress } from '@/lib/supabase/types';
+import type { BadgeProgress, UserProgress } from '@/lib/supabase/types';
 import type { PostgrestError } from '@supabase/supabase-js';
 
 type PracticeFrequency = {
@@ -7,6 +7,31 @@ type PracticeFrequency = {
   weekly: { [key: string]: number };
   monthly: { [key: string]: number };
 };
+
+/**
+ * Fetches user progress data from the database
+ * @param userId The user ID to fetch progress for
+ * @returns The user's progress data or null if not found
+ */
+export async function getUserProgress(userId: string): Promise<UserProgress | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('user_progress')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      console.error(`Error fetching user progress for user ${userId}:`, error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error(`Error in getUserProgress for user ${userId}:`, error);
+    return null;
+  }
+}
 
 async function updatePracticeFrequency(userId: string, date: string = new Date().toISOString().split('T')[0]): Promise<PracticeFrequency> {
   const { data: userProgress, error } = await supabaseAdmin

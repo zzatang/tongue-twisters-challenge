@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserButton, useUser } from "@clerk/nextjs";
-import { DifficultyFilter } from "@/components/dashboard/difficulty-filter";
-import { TongueTwisterTile } from "@/components/dashboard/tongue-twister-tile";
 import { ProgressTracking } from "@/components/dashboard/progress-tracking";
-import { getTongueTwisters, getUserProgress } from "@/lib/supabase/api";
-import type { UserProgress, TongueTwister as DbTongueTwister } from "@/lib/supabase/types";
-import { generateTitle } from "@/lib/utils/text";
+import { TongueTwisterTile } from "@/components/dashboard/tongue-twister-tile";
+import { getTongueTwisters } from "@/lib/services/twister-service";
+import { getUserProgress } from "@/lib/services/progress-service";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mic, Sparkles, Music } from "lucide-react";
 
-// Update types to match database schema
-type DifficultyLevel = 'Easy' | 'Intermediate' | 'Advanced';
-type DifficultyFilter = 'All' | DifficultyLevel;
+type DifficultyLevel = "Easy" | "Intermediate" | "Advanced";
+type DifficultyFilter = DifficultyLevel | "All";
 
 interface TongueTwister {
   id: string;
@@ -27,25 +27,26 @@ interface TongueTwister {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { user } = useUser();
-  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>("All");
-  
-  // Handle difficulty change
-  const handleDifficultyChange = (difficulty: DifficultyFilter) => {
-    console.log('Setting difficulty to:', difficulty);
-    setSelectedDifficulty(difficulty);
-  };
-
+  const router = useRouter();
   const [tongueTwisters, setTongueTwisters] = useState<TongueTwister[]>([]);
-  const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
+  const [userProgress, setUserProgress] = useState<any>(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>("All");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!user) return;
+  const handleDifficultyChange = (value: string) => {
+    setSelectedDifficulty(value as DifficultyFilter);
+  };
 
+  const handleTongueTwisterClick = (twisterId: string) => {
+    router.push(`/practice/${twisterId}`);
+  };
+
+  useEffect(() => {
+    if (!user) return;
+
+    async function fetchData() {
       try {
         setIsLoading(true);
         setError(null);
@@ -106,19 +107,36 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
+    <div className="min-h-screen bg-fun-pattern">
+      <header className="border-b border-[hsl(var(--fun-purple))]/20 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container flex h-16 items-center justify-between px-4">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bubblegum text-[hsl(var(--fun-purple))] text-shadow-fun flex items-center">
+            <Sparkles className="h-6 w-6 mr-2 text-[hsl(var(--fun-yellow))] animate-float" />
+            Tongue Twisters Challenge
+          </h1>
           <UserButton afterSignOutUrl="/" />
         </div>
       </header>
 
       <main className="container px-4 py-8">
         {error ? (
-          <div className="text-red-500 text-center p-4">{error}</div>
+          <div className="text-red-500 text-center p-6 font-comic bg-white rounded-xl shadow-lg">
+            <p className="text-xl font-bubblegum text-[hsl(var(--fun-pink))] mb-2">Oops!</p>
+            <p>{error}</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 bg-[hsl(var(--fun-purple))] hover:bg-[hsl(var(--fun-purple))]/90 font-comic"
+            >
+              Try Again
+            </Button>
+          </div>
         ) : isLoading ? (
-          <div className="text-center p-4">Loading...</div>
+          <div className="text-center p-8">
+            <div className="animate-bounce mb-4">
+              <Music className="h-12 w-12 text-[hsl(var(--fun-purple))] mx-auto" />
+            </div>
+            <p className="text-xl font-bubblegum text-[hsl(var(--fun-purple))]">Loading your fun tongue twisters...</p>
+          </div>
         ) : (
           <div className="space-y-8">
             {userProgress && (
@@ -141,30 +159,65 @@ export default function DashboardPage() {
               />
             )}
 
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Tongue Twisters</h2>
+            <div className="card-fun p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bubblegum text-[hsl(var(--fun-purple))] text-shadow-fun flex items-center">
+                  <Mic className="h-6 w-6 mr-2 text-[hsl(var(--fun-pink))]" />
+                  Pick a Tongue Twister!
+                </h2>
                 <DifficultyFilter
                   selectedDifficulty={selectedDifficulty}
                   onDifficultyChange={handleDifficultyChange}
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredTongueTwisters.map((twister) => (
-                  <TongueTwisterTile
-                    key={twister.id}
-                    title={generateTitle(twister.text)}
-                    text={twister.text}
-                    difficulty={twister.difficulty}
-                    onClick={() => router.push(`/practice/${twister.id}`)}
-                  />
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredTongueTwisters.length > 0 ? (
+                  filteredTongueTwisters.map((twister, index) => (
+                    <TongueTwisterTile
+                      key={twister.id}
+                      title={twister.category}
+                      text={twister.text}
+                      difficulty={twister.difficulty}
+                      onClick={() => handleTongueTwisterClick(twister.id)}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center p-8 font-comic">
+                    <p className="text-xl font-bubblegum text-[hsl(var(--fun-purple))] mb-2">No tongue twisters found!</p>
+                    <p>Try selecting a different difficulty level.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function DifficultyFilter({
+  selectedDifficulty,
+  onDifficultyChange,
+}: {
+  selectedDifficulty: DifficultyFilter;
+  onDifficultyChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex items-center space-x-2">
+      <span className="text-sm font-comic text-gray-600">Difficulty:</span>
+      <Select value={selectedDifficulty} onValueChange={onDifficultyChange}>
+        <SelectTrigger className="w-[180px] font-comic bg-white border-[hsl(var(--fun-purple))]/20 focus:ring-[hsl(var(--fun-purple))]">
+          <SelectValue placeholder="Select difficulty" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="All" className="font-comic">All Levels</SelectItem>
+          <SelectItem value="Easy" className="font-comic text-[hsl(var(--fun-green))]">Easy</SelectItem>
+          <SelectItem value="Intermediate" className="font-comic text-[hsl(var(--fun-yellow))]">Intermediate</SelectItem>
+          <SelectItem value="Advanced" className="font-comic text-[hsl(var(--fun-pink))]">Advanced</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
