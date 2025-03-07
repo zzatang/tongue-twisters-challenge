@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTongueTwisterById } from '@/lib/supabase/api';
 import { analyzeSpeech } from '@/lib/speech/pronunciation';
+import { updateUserProgress } from '@/lib/services/progress-service';
+import { withAuth } from '@/lib/auth/clerk';
 
-export async function POST(request: NextRequest) {
+// Export the POST handler wrapped with auth
+export const POST = withAuth(async (userId: string, request: NextRequest) => {
   try {
     const body = await request.json();
 
@@ -52,6 +55,24 @@ export async function POST(request: NextRequest) {
         });
       }
       
+      // Calculate approximate duration (in minutes) - assuming 30 seconds for a typical practice
+      // In a real implementation, the client would send the actual duration
+      const practiceDuration = body.duration || 0.5; // Default to 30 seconds (0.5 minutes)
+      
+      // Update user progress metrics (only for successful attempts)
+      try {
+        await updateUserProgress(
+          userId,
+          body.tongueTwisterId,
+          practiceDuration,
+          analysis.clarity
+        );
+        console.log('User progress updated successfully');
+      } catch (progressError) {
+        // Log the error but don't fail the request
+        console.error('Failed to update user progress:', progressError);
+      }
+      
       // Format the response to match the expected format in the client
       return NextResponse.json({
         success: true,
@@ -85,4 +106,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

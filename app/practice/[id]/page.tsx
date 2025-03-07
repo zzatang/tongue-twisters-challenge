@@ -52,7 +52,7 @@ export default function PracticePage({ params }: { params: { id: string } }) {
     fetchTongueTwister();
   }, [params.id, router]);
 
-  const handleRecordingComplete = async (audioData: string) => {
+  const handleRecordingComplete = async (audioData: string, duration: number) => {
     setIsAnalyzing(true);
     setFeedback(null);
     setError(null);
@@ -67,8 +67,8 @@ export default function PracticePage({ params }: { params: { id: string } }) {
       const byteArray = new Uint8Array(byteNumbers);
       const audioBlob = new Blob([byteArray], { type: 'audio/webm' });
       
-      console.log('Calling analyzeSpeech with tongue twister ID:', params.id);
-      const result = await analyzeSpeech(audioBlob, params.id);
+      console.log('Calling analyzeSpeech with tongue twister ID:', params.id, 'duration:', duration);
+      const result = await analyzeSpeech(audioBlob, params.id, duration);
       console.log('Speech analysis result:', result);
 
       if (!result.success) {

@@ -17,7 +17,8 @@ export type SpeechAnalysisResult = {
 
 export async function analyzeSpeech(
   audioBlob: Blob,
-  tongueTwisterId: string
+  tongueTwisterId: string,
+  duration?: number
 ): Promise<SpeechAnalysisResult> {
   try {
     // Convert blob to base64
@@ -40,6 +41,7 @@ export async function analyzeSpeech(
       body: JSON.stringify({
         audioData: base64Audio,
         tongueTwisterId,
+        duration, // Include the duration parameter
       }),
     });
 
