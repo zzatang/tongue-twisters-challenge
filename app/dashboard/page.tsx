@@ -10,6 +10,7 @@ import { getUserProgress } from "@/lib/services/progress-service";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mic, Sparkles, Music } from "lucide-react";
+import type { UserProgress } from "@/lib/supabase/types";
 
 type DifficultyLevel = "Easy" | "Intermediate" | "Advanced";
 type DifficultyFilter = DifficultyLevel | "All";
@@ -26,11 +27,29 @@ interface TongueTwister {
   phonetic_focus?: string[];
 }
 
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  earned: boolean;
+}
+
+interface Metrics {
+  practiceStreak: number;
+  totalPracticeTime: number;
+  averageClarityScore: number;
+  practiceFrequency: {
+    thisWeek: number;
+    lastWeek: number;
+  };
+  badges: Badge[];
+}
+
 export default function DashboardPage() {
   const { user } = useUser();
   const router = useRouter();
   const [tongueTwisters, setTongueTwisters] = useState<TongueTwister[]>([]);
-  const [userProgress, setUserProgress] = useState<any>(null);
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>("All");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,19 +117,52 @@ export default function DashboardPage() {
 
   const filteredTongueTwisters = tongueTwisters.filter(
     (twister) => {
-      console.log('Filtering twister:', twister.difficulty, 'Selected difficulty:', selectedDifficulty);
-      
       if (selectedDifficulty === "All") return true;
-      
       return twister.difficulty === selectedDifficulty;
     }
   );
+
+  // Calculate metrics from user progress data
+  const calculateMetrics = (): Metrics | null => {
+    if (!userProgress) return null;
+    
+    const thisWeekCount = userProgress.practice_frequency && 
+      typeof userProgress.practice_frequency === 'object' && 
+      userProgress.practice_frequency.daily ? 
+      Object.values(userProgress.practice_frequency.daily).reduce((sum: number, count: number) => sum + count, 0) : 0;
+    
+    const lastWeekCount = userProgress.practice_frequency && 
+      typeof userProgress.practice_frequency === 'object' && 
+      userProgress.practice_frequency.weekly ? 
+      Object.values(userProgress.practice_frequency.weekly).reduce((sum: number, count: number) => sum + count, 0) : 0;
+    
+    const badges = userProgress.badges && Array.isArray(userProgress.badges) ? 
+      userProgress.badges.map((badge: any) => ({
+        id: badge.id || '',
+        name: badge.name || '',
+        description: badge.description || '',
+        earned: !!badge.earned
+      })) : [];
+    
+    return {
+      practiceStreak: userProgress.practice_streak || 0,
+      totalPracticeTime: userProgress.total_practice_time || 0,
+      averageClarityScore: userProgress.clarity_score || 0,
+      practiceFrequency: {
+        thisWeek: thisWeekCount,
+        lastWeek: lastWeekCount
+      },
+      badges
+    };
+  };
+
+  const metrics = calculateMetrics();
 
   return (
     <div className="min-h-screen bg-fun-pattern">
       <header className="border-b border-[hsl(var(--fun-purple))]/20 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container flex h-16 items-center justify-between px-4">
-          <h1 className="text-2xl font-bubblegum text-[hsl(var(--fun-purple))] text-shadow-fun flex items-center">
+          <h1 className="text-2xl font-bubblegum text-[hsl(var(--fun-purple))] flex items-center">
             <Sparkles className="h-6 w-6 mr-2 text-[hsl(var(--fun-yellow))] animate-float" />
             Tongue Twisters Challenge
           </h1>
@@ -139,29 +191,13 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {userProgress && (
-              <ProgressTracking
-                metrics={{
-                  practiceStreak: userProgress.practice_streak,
-                  totalPracticeTime: userProgress.total_practice_time,
-                  averageClarityScore: userProgress.clarity_score,
-                  practiceFrequency: {
-                    thisWeek: Object.values(userProgress.practice_frequency.daily || {}).reduce((sum, count) => sum + count, 0),
-                    lastWeek: Object.values(userProgress.practice_frequency.weekly || {}).reduce((sum, count) => sum + count, 0)
-                  },
-                  badges: userProgress.badges?.map(badge => ({
-                    id: badge.id,
-                    name: badge.name,
-                    description: badge.description,
-                    earned: badge.earned
-                  })) || []
-                }}
-              />
+            {metrics && (
+              <ProgressTracking metrics={metrics} />
             )}
 
             <div className="card-fun p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bubblegum text-[hsl(var(--fun-purple))] text-shadow-fun flex items-center">
+                <h2 className="text-2xl font-bubblegum text-[hsl(var(--fun-purple))] flex items-center">
                   <Mic className="h-6 w-6 mr-2 text-[hsl(var(--fun-pink))]" />
                   Pick a Tongue Twister!
                 </h2>
@@ -173,7 +209,7 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredTongueTwisters.length > 0 ? (
-                  filteredTongueTwisters.map((twister, index) => (
+                  filteredTongueTwisters.map((twister) => (
                     <TongueTwisterTile
                       key={twister.id}
                       title={twister.category}
@@ -205,17 +241,17 @@ function DifficultyFilter({
   onDifficultyChange: (value: string) => void;
 }) {
   return (
-    <div className="flex items-center space-x-2">
-      <span className="text-sm font-comic text-gray-600">Difficulty:</span>
+    <div className="flex items-center">
+      <span className="mr-2 text-sm font-medium text-[hsl(var(--fun-purple))] font-comic">Difficulty:</span>
       <Select value={selectedDifficulty} onValueChange={onDifficultyChange}>
-        <SelectTrigger className="w-[180px] font-comic bg-white border-[hsl(var(--fun-purple))]/20 focus:ring-[hsl(var(--fun-purple))]">
-          <SelectValue placeholder="Select difficulty" />
+        <SelectTrigger className="w-[140px] border-2 border-[hsl(var(--fun-purple))]/30 bg-white font-comic text-[hsl(var(--fun-purple))]">
+          <SelectValue placeholder="All Levels" />
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="All" className="font-comic">All Levels</SelectItem>
-          <SelectItem value="Easy" className="font-comic text-[hsl(var(--fun-green))]">Easy</SelectItem>
-          <SelectItem value="Intermediate" className="font-comic text-[hsl(var(--fun-yellow))]">Intermediate</SelectItem>
-          <SelectItem value="Advanced" className="font-comic text-[hsl(var(--fun-pink))]">Advanced</SelectItem>
+        <SelectContent className="font-comic">
+          <SelectItem value="All" className="cursor-pointer">All Levels</SelectItem>
+          <SelectItem value="Easy" className="cursor-pointer">Easy</SelectItem>
+          <SelectItem value="Intermediate" className="cursor-pointer">Intermediate</SelectItem>
+          <SelectItem value="Advanced" className="cursor-pointer">Advanced</SelectItem>
         </SelectContent>
       </Select>
     </div>

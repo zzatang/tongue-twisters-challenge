@@ -55,7 +55,7 @@ export async function getTongueTwisterById(id: string): Promise<TongueTwister | 
  * @param difficulty The difficulty level to filter by
  * @returns Array of tongue twisters matching the difficulty
  */
-export async function getTongueTwistersByDifficulty(difficulty: string): Promise<TongueTwister[]> {
+export async function getTongueTwistersByDifficulty(difficulty: 'Easy' | 'Intermediate' | 'Advanced'): Promise<TongueTwister[]> {
   try {
     const { data, error } = await supabaseAdmin
       .from('tongue_twisters')

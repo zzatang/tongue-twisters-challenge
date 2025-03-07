@@ -26,7 +26,7 @@ export async function getUserProgress(userId: string): Promise<UserProgress | nu
       return null;
     }
 
-    return data;
+    return data as UserProgress;
   } catch (error) {
     console.error(`Error in getUserProgress for user ${userId}:`, error);
     return null;
@@ -199,9 +199,10 @@ export async function updateUserProgress(
       createdAt: currentProgress?.created_at || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
     return badgeProgress;
   } catch (error) {
-    console.error('Error updating user progress:', error);
+    console.error('Error in updateUserProgress:', error);
     throw error;
   }
 }
