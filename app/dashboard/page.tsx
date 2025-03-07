@@ -70,13 +70,12 @@ export default function DashboardPage() {
       return;
     }
 
+    const userId = user.id;
+
     async function fetchData() {
       try {
         setIsLoading(true);
         setError(null);
-
-        // At this point, we've already checked that user is not null
-        const userId = user.id;
 
         // Fetch tongue twisters and user progress in parallel
         const [twistersData, progressData] = await Promise.allSettled([
