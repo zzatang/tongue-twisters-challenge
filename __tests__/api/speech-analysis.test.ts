@@ -3,6 +3,7 @@ import { POST } from '@/app/api/speech/analyze/route';
 import { getTongueTwisterById } from '@/lib/supabase/api';
 import { analyzeSpeech } from '@/lib/speech/pronunciation';
 import { updateUserProgress } from '@/lib/services/progress-service';
+import { checkAndAwardBadges } from '@/lib/services/badge-service';
 import type { TongueTwister } from '@/lib/supabase/types';
 import type { SpeechAnalysisResult } from '@/lib/speech/types';
 
@@ -18,7 +19,25 @@ jest.mock('@/lib/speech/pronunciation', () => ({
 
 // Mock the progress service
 jest.mock('@/lib/services/progress-service', () => ({
-  updateUserProgress: jest.fn().mockResolvedValue(undefined),
+  updateUserProgress: jest.fn().mockResolvedValue({
+    practiceStreak: 3,
+    totalPracticeTime: 30,
+    totalSessions: 10,
+    clarityScore: 85,
+    practiceFrequency: {
+      daily: { '2025-03-08': 1 },
+      weekly: { '2025-03-02': 5 },
+      monthly: { '2025-03': 10 }
+    },
+    userId: 'test-user-id',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }),
+}));
+
+// Mock the badge service
+jest.mock('@/lib/services/badge-service', () => ({
+  checkAndAwardBadges: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock console.error to prevent test output pollution

@@ -36,3 +36,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env
+documentation/.~lock.production_validation_test_plan.csv#
+documentation/production_validation_test_plan.csv
+documentation/production_validation_test_plan.csv

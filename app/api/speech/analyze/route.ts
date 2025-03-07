@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTongueTwisterById } from '@/lib/supabase/api';
 import { analyzeSpeech } from '@/lib/speech/pronunciation';
 import { updateUserProgress } from '@/lib/services/progress-service';
+import { checkAndAwardBadges } from '@/lib/services/badge-service';
 import { withAuth } from '@/lib/auth/clerk';
 
 // Export the POST handler wrapped with auth
@@ -62,13 +63,22 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
         
         // Update user progress metrics (only for successful attempts)
         try {
-          await updateUserProgress(
+          const progressData = await updateUserProgress(
             userId,
             body.tongueTwisterId,
             practiceDuration,
             analysis.clarity
           );
           console.log('User progress updated successfully');
+          
+          // Check and award badges based on updated progress
+          try {
+            await checkAndAwardBadges(userId, progressData);
+            console.log('Badge check completed successfully');
+          } catch (badgeError) {
+            // Log the error but don't fail the request
+            console.error('Failed to check and award badges:', badgeError);
+          }
         } catch (progressError) {
           // Log the error but don't fail the request
           console.error('Failed to update user progress:', progressError);
