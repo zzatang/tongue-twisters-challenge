@@ -59,7 +59,7 @@ export function TongueTwisterTile({
           className="w-full bg-[hsl(var(--fun-purple))] hover:bg-[hsl(var(--fun-purple))]/90 text-white font-bubblegum text-lg wiggle-hover"
         >
           <PlayIcon className="mr-2 h-5 w-5" />
-          Let's Practice!
+          Let&apos;s Practice!
         </Button>
       </CardContent>
     </Card>
