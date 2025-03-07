@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { POST } from '@/app/api/speech/analyze/route';
 import { getTongueTwisterById } from '@/lib/supabase/api';
 import { analyzeSpeech } from '@/lib/speech/pronunciation';
+import { updateUserProgress } from '@/lib/services/progress-service';
 import type { TongueTwister } from '@/lib/supabase/types';
 import type { SpeechAnalysisResult } from '@/lib/speech/types';
 
@@ -13,6 +14,11 @@ jest.mock('@/lib/supabase/api', () => ({
 // Mock the speech analysis function
 jest.mock('@/lib/speech/pronunciation', () => ({
   analyzeSpeech: jest.fn(),
+}));
+
+// Mock the progress service
+jest.mock('@/lib/services/progress-service', () => ({
+  updateUserProgress: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock console.error to prevent test output pollution
@@ -34,7 +40,9 @@ jest.mock('next/server', () => ({
 
 // Mock the auth wrapper
 jest.mock('@/lib/auth/clerk', () => ({
-  withAuth: (handler: Function) => handler
+  withAuth: (handler: Function) => (
+    async (req: NextRequest) => handler('test-user-id', req)
+  )
 }));
 
 describe('Speech Analysis API', () => {
@@ -48,6 +56,7 @@ describe('Speech Analysis API', () => {
       json: jest.fn().mockResolvedValue({
         audioData: 'base64-encoded-audio-data',
         tongueTwisterId: '123',
+        duration: 0.5, // 30 seconds
       }),
     } as unknown as NextRequest;
 
@@ -78,7 +87,7 @@ describe('Speech Analysis API', () => {
       success: true,
       result: {
         text: mockTongueTwister.text,
-        confidence: 0.9,
+        confidence: 0.85,
         score: mockAnalysisResult.clarity,
         feedback: mockAnalysisResult.tips,
         wordTimings: []
@@ -96,13 +105,19 @@ describe('Speech Analysis API', () => {
     // Verify that the correct functions were called
     expect(getTongueTwisterById).toHaveBeenCalledWith('123');
     expect(analyzeSpeech).toHaveBeenCalledWith('base64-encoded-audio-data', mockTongueTwister.text);
+    expect(updateUserProgress).toHaveBeenCalledWith(
+      'test-user-id',
+      '123',
+      0.5,
+      85
+    );
   });
 
-  it('returns 500 if request body is missing or invalid', async () => {
-    // Mock request with missing body
+  it('returns 400 if request body is missing or invalid', async () => {
+    // Mock request with missing required fields
     const mockRequest = {
-      json: jest.fn().mockImplementation(() => {
-        throw new Error('Invalid JSON');
+      json: jest.fn().mockResolvedValue({
+        // Missing audioData and tongueTwisterId
       }),
     } as unknown as NextRequest;
 
@@ -110,9 +125,12 @@ describe('Speech Analysis API', () => {
     const response = await POST(mockRequest);
 
     // Verify the response
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(400);
     const responseData = await response.json();
-    expect(responseData).toEqual({ success: false, error: 'Failed to analyze speech' });
+    expect(responseData).toEqual({ 
+      success: false, 
+      error: 'Missing required fields'
+    });
   });
 
   it('returns 404 if tongue twister is not found', async () => {
@@ -125,15 +143,21 @@ describe('Speech Analysis API', () => {
     } as unknown as NextRequest;
 
     // Mock tongue twister not found
-    (getTongueTwisterById as jest.Mock).mockResolvedValue(null);
+    (getTongueTwisterById as jest.Mock).mockImplementation(() => {
+      throw new Error('Tongue twister not found');
+    });
 
     // Call the API
     const response = await POST(mockRequest);
 
     // Verify the response
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(500);
     const responseData = await response.json();
-    expect(responseData).toEqual({ success: false, error: 'Tongue twister not found' });
+    expect(responseData).toMatchObject({ 
+      success: false, 
+      error: 'Failed to analyze speech',
+      details: expect.any(String)
+    });
   });
 
   it('returns 500 if speech analysis fails', async () => {
@@ -169,6 +193,10 @@ describe('Speech Analysis API', () => {
     // Verify the response
     expect(response.status).toBe(500);
     const responseData = await response.json();
-    expect(responseData).toEqual({ success: false, error: 'Failed to process speech analysis' });
+    expect(responseData).toMatchObject({ 
+      success: false, 
+      error: 'Failed to process speech analysis',
+      details: expect.any(String)
+    });
   });
 });

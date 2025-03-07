@@ -16,84 +16,97 @@ export const POST = withAuth(async (userId: string, request: NextRequest) => {
       );
     }
 
-    const tongueTwister = await getTongueTwisterById(body.tongueTwisterId);
-    if (!tongueTwister) {
-      return NextResponse.json(
-        { success: false, error: 'Tongue twister not found' },
-        { status: 404 }
-      );
-    }
-
-    // Call the speech analysis function
     try {
-      console.log('Analyzing speech for tongue twister:', tongueTwister.text);
-      
-      // Analyze the speech using Google Speech-to-Text API
-      const analysis = await analyzeSpeech(body.audioData, tongueTwister.text);
-      
-      console.log('Speech analysis result:', {
-        clarity: analysis.clarity,
-        mispronounced: analysis.mispronounced,
-        tips: analysis.tips
-      });
-      
-      // Check if we have a "no speech detected" case
-      const isNoSpeechDetected = analysis.clarity === 0 && 
-        analysis.tips.some(tip => tip.includes("No speech detected"));
-      
-      if (isNoSpeechDetected) {
+      const tongueTwister = await getTongueTwisterById(body.tongueTwisterId);
+      if (!tongueTwister) {
+        return NextResponse.json(
+          { success: false, error: 'Tongue twister not found' },
+          { status: 404 }
+        );
+      }
+
+      // Call the speech analysis function
+      try {
+        console.log('Analyzing speech for tongue twister:', tongueTwister.text);
+        
+        // Analyze the speech using Google Speech-to-Text API
+        const analysis = await analyzeSpeech(body.audioData, tongueTwister.text);
+        
+        console.log('Speech analysis result:', {
+          clarity: analysis.clarity,
+          mispronounced: analysis.mispronounced,
+          tips: analysis.tips
+        });
+        
+        // Check if we have a "no speech detected" case
+        const isNoSpeechDetected = analysis.clarity === 0 && 
+          analysis.tips.some(tip => tip.includes("No speech detected"));
+        
+        if (isNoSpeechDetected) {
+          return NextResponse.json({
+            success: false,
+            error: 'No speech detected',
+            result: {
+              text: '',
+              confidence: 0,
+              score: 0,
+              feedback: analysis.tips,
+              wordTimings: []
+            }
+          });
+        }
+        
+        // Calculate approximate duration (in minutes) - assuming 30 seconds for a typical practice
+        // In a real implementation, the client would send the actual duration
+        const practiceDuration = body.duration || 0.5; // Default to 30 seconds (0.5 minutes)
+        
+        // Update user progress metrics (only for successful attempts)
+        try {
+          await updateUserProgress(
+            userId,
+            body.tongueTwisterId,
+            practiceDuration,
+            analysis.clarity
+          );
+          console.log('User progress updated successfully');
+        } catch (progressError) {
+          // Log the error but don't fail the request
+          console.error('Failed to update user progress:', progressError);
+        }
+        
+        // Format the response to match the expected format in the client
         return NextResponse.json({
-          success: false,
-          error: 'No speech detected',
+          success: true,
           result: {
-            text: '',
-            confidence: 0,
-            score: 0,
+            text: tongueTwister.text,
+            confidence: analysis.clarity / 100, // Convert to 0-1 scale
+            score: analysis.clarity,
             feedback: analysis.tips,
-            wordTimings: []
+            wordTimings: [] // We'll implement this later if needed
           }
         });
-      }
-      
-      // Calculate approximate duration (in minutes) - assuming 30 seconds for a typical practice
-      // In a real implementation, the client would send the actual duration
-      const practiceDuration = body.duration || 0.5; // Default to 30 seconds (0.5 minutes)
-      
-      // Update user progress metrics (only for successful attempts)
-      try {
-        await updateUserProgress(
-          userId,
-          body.tongueTwisterId,
-          practiceDuration,
-          analysis.clarity
+      } catch (analysisError) {
+        console.error('Speech analysis processing error:', analysisError);
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Failed to process speech analysis',
+            details: analysisError instanceof Error ? analysisError.message : 'Unknown error'
+          },
+          { status: 500 }
         );
-        console.log('User progress updated successfully');
-      } catch (progressError) {
-        // Log the error but don't fail the request
-        console.error('Failed to update user progress:', progressError);
       }
-      
-      // Format the response to match the expected format in the client
-      return NextResponse.json({
-        success: true,
-        result: {
-          text: tongueTwister.text,
-          confidence: analysis.clarity / 100, // Convert to 0-1 scale
-          score: analysis.clarity,
-          feedback: analysis.tips,
-          wordTimings: [] // We'll implement this later if needed
-        }
-      });
-    } catch (analysisError) {
-      console.error('Speech analysis processing error:', analysisError);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Failed to process speech analysis',
-          details: analysisError instanceof Error ? analysisError.message : 'Unknown error'
-        },
-        { status: 500 }
-      );
+    } catch (tongueTwisterError) {
+      // Handle tongue twister retrieval errors
+      console.error('Tongue twister retrieval error:', tongueTwisterError);
+      if (tongueTwisterError instanceof Error && 
+          tongueTwisterError.message.includes('not found')) {
+        return NextResponse.json(
+          { success: false, error: 'Tongue twister not found' },
+          { status: 404 }
+        );
+      }
+      throw tongueTwisterError; // Re-throw to be caught by the outer catch block
     }
   } catch (error) {
     console.error('Speech analysis error:', error);
