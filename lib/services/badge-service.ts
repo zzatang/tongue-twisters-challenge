@@ -4,12 +4,25 @@ import type { Badge, UserBadge, BadgeProgress } from '@/lib/supabase/types';
 type ProgressMetric = keyof Pick<BadgeProgress, 'practiceStreak' | 'totalPracticeTime' | 'totalSessions' | 'clarityScore'>;
 
 interface BadgeCriteria {
-  type: ProgressMetric;
+  type: ProgressMetric | string;
   value: number;
 }
 
 function checkBadgeCriteria(progress: BadgeProgress, criteria: BadgeCriteria): boolean {
-  const value = progress[criteria.type];
+  // Map database criteria types to BadgeProgress property names
+  const criteriaTypeMap: Record<string, keyof BadgeProgress> = {
+    'clarity': 'clarityScore',
+    'streak': 'practiceStreak',
+    'sessions': 'totalSessions',
+    'time': 'totalPracticeTime',
+    // Add other mappings as needed
+  };
+
+  // Get the correct property name from the map or use the original type
+  const propertyName = criteriaTypeMap[criteria.type] || criteria.type as keyof BadgeProgress;
+  const value = progress[propertyName];
+  
+  console.log(`Checking badge criteria: ${criteria.type} (${propertyName}) >= ${criteria.value}, actual value: ${value}`);
   return typeof value === 'number' && value >= criteria.value;
 }
 
@@ -43,7 +56,7 @@ export async function checkAndAwardBadges(userId: string, progress: BadgeProgres
       if (earnedBadgeIds.has(badge.id)) continue;
 
       const criteria: BadgeCriteria = {
-        type: badge.criteria_type as ProgressMetric,
+        type: badge.criteria_type,
         value: badge.criteria_value
       };
 
@@ -60,6 +73,8 @@ export async function checkAndAwardBadges(userId: string, progress: BadgeProgres
 
         if (awardError) {
           console.error(`Error awarding badge ${badge.id}:`, awardError);
+        } else {
+          console.log(`Awarded badge ${badge.name} to user ${userId}`);
         }
       }
     }
