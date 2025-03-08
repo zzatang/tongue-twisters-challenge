@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { UserButton, useUser } from "@clerk/nextjs";
 import { ProgressTracking } from "@/components/dashboard/progress-tracking";
 import { TongueTwisterTile } from "@/components/dashboard/tongue-twister-tile";
-import { getTongueTwisters } from "@/lib/services/twister-service";
+import { getTongueTwisters } from "@/lib/supabase/api";
 import { getUserProgress } from "@/lib/services/progress-service";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

@@ -42,6 +42,15 @@ jest.mock('lucide-react', () => ({
   Star: () => <div data-testid="star-icon" />,
   Activity: () => <div data-testid="activity-icon" />,
   Award: () => <div data-testid="award-icon" />,
+  Flame: () => <div data-testid="flame-icon" />,
+  Trophy: () => <div data-testid="trophy-icon" />,
+  Medal: () => <div data-testid="medal-icon" />,
+  Lock: () => <div data-testid="lock-icon" />,
+  Zap: () => <div data-testid="zap-icon" />,
+  Target: () => <div data-testid="target-icon" />,
+  Gift: () => <div data-testid="gift-icon" />,
+  Crown: () => <div data-testid="crown-icon" />,
+  Heart: () => <div data-testid="heart-icon" />,
 }));
 
 describe('ProgressTracking', () => {
