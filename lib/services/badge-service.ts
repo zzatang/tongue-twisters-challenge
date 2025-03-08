@@ -15,7 +15,8 @@ function checkBadgeCriteria(progress: BadgeProgress, criteria: BadgeCriteria): b
     'streak': 'practiceStreak',
     'sessions': 'totalSessions',
     'time': 'totalPracticeTime',
-    // Add other mappings as needed
+    'speed': 'clarityScore',    // Speed Demon badge - we'll use clarity score for now
+    'accuracy': 'clarityScore'  // Perfect Score badge - maps to clarity score
   };
 
   // Get the correct property name from the map or use the original type
