@@ -22,6 +22,11 @@ export async function getUserProgress(userId: string): Promise<UserProgress | nu
       .single();
 
     if (error) {
+      // If no data found, create default progress for new user
+      if (error.code === 'PGRST116') { // PGRST116 is "no rows returned" error
+        return await createDefaultUserProgress(userId);
+      }
+      
       console.error(`Error fetching user progress for user ${userId}:`, error);
       return null;
     }
@@ -29,6 +34,46 @@ export async function getUserProgress(userId: string): Promise<UserProgress | nu
     return data as UserProgress;
   } catch (error) {
     console.error(`Error in getUserProgress for user ${userId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Creates default progress entry for a new user
+ * @param userId The user ID to create progress for
+ * @returns The newly created user progress data
+ */
+async function createDefaultUserProgress(userId: string): Promise<UserProgress | null> {
+  try {
+    const defaultProgress = {
+      user_id: userId,
+      practice_streak: 0,
+      total_practice_time: 0,
+      clarity_score: 0,
+      total_sessions: 0,
+      practice_frequency: {
+        daily: {},
+        weekly: {},
+        monthly: {}
+      },
+      badges: []
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from('user_progress')
+      .insert(defaultProgress)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`Error creating default progress for user ${userId}:`, error);
+      return null;
+    }
+
+    console.log(`Created default progress for new user ${userId}`);
+    return data as UserProgress;
+  } catch (error) {
+    console.error(`Error in createDefaultUserProgress for user ${userId}:`, error);
     return null;
   }
 }
