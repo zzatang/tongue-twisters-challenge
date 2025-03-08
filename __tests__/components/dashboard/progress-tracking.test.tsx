@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ProgressTracking } from '@/components/dashboard/progress-tracking';
-import { getAllBadges, getUserBadges } from '@/lib/supabase/api';
+import { getAllBadges, getUserBadges } from '@/lib/services/badge-service';
 import { useToast } from '@/components/ui/use-toast';
 import type { Badge } from '@/lib/supabase/types';
 import { useAuth } from '@clerk/nextjs';
@@ -20,7 +20,7 @@ jest.mock('@/components/dashboard/badges-showcase', () => ({
 }));
 
 // Mock the badge service functions
-jest.mock('@/lib/supabase/api', () => ({
+jest.mock('@/lib/services/badge-service', () => ({
   getAllBadges: jest.fn().mockResolvedValue([
     { id: '1', name: 'First Practice', icon: '🎯' },
     { id: '2', name: 'Perfect Score', icon: '⭐' },
@@ -67,6 +67,7 @@ describe('ProgressTracking', () => {
         lastWeek: 2
       },
       averageClarityScore: 85,
+      bestClarityScore: 95,
     };
 
     render(<ProgressTracking userId="test-user" metrics={mockMetrics} />);
@@ -84,8 +85,11 @@ describe('ProgressTracking', () => {
       expect(screen.getByText('3')).toBeInTheDocument();
       expect(screen.getByText('times')).toBeInTheDocument();
       
-      // Check for clarity score
-      expect(screen.getByText(/85%/)).toBeInTheDocument();
+      // Check for clarity scores (both average and best)
+      expect(screen.getByText('85%')).toBeInTheDocument();
+      expect(screen.getByText('95%')).toBeInTheDocument();
+      expect(screen.getByText('avg')).toBeInTheDocument();
+      expect(screen.getByText('best')).toBeInTheDocument();
     });
   });
 
@@ -98,6 +102,7 @@ describe('ProgressTracking', () => {
         lastWeek: 2
       },
       averageClarityScore: 85,
+      bestClarityScore: 95,
     };
 
     render(<ProgressTracking userId="test-user" metrics={mockMetrics} />);
@@ -121,6 +126,7 @@ describe('ProgressTracking', () => {
         lastWeek: 2
       },
       averageClarityScore: 85,
+      bestClarityScore: 95,
     };
 
     render(<ProgressTracking userId="test-user" metrics={mockMetrics} />);

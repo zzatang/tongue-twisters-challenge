@@ -29,6 +29,7 @@ interface ProgressMetrics {
   practiceStreak: number;
   totalPracticeTime: number; // in minutes
   averageClarityScore: number;
+  bestClarityScore?: number;
   practiceFrequency: {
     thisWeek: number;
     lastWeek: number;
@@ -77,7 +78,7 @@ export function ProgressTracking({ metrics, userId: propUserId, className }: Pro
             total_practice_time: metrics.totalPracticeTime,
             total_sessions: 0,
             clarity_score: metrics.averageClarityScore,
-            best_clarity_score: metrics.averageClarityScore,
+            best_clarity_score: metrics.bestClarityScore || metrics.averageClarityScore,
             practice_frequency: {
               daily: {},
               weekly: {},
