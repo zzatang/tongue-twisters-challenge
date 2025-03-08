@@ -79,7 +79,7 @@ export default function AdminPage() {
       toast({
         title: "Success!",
         description: "Tongue twister added successfully.",
-        variant: "success"
+        variant: "default"
       });
     } catch (error) {
       console.error('Error adding tongue twister:', error);
