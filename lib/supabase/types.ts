@@ -228,6 +228,7 @@ export interface BadgeProgress {
   totalPracticeTime: number;
   totalSessions: number;
   clarityScore: number;
+  bestClarityScore?: number;
   practiceFrequency: {
     daily: { [key: string]: number };
     weekly: { [key: string]: number };

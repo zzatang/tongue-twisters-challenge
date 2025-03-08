@@ -224,6 +224,17 @@ export async function updateUserProgress(
       console.log('Practice session recorded successfully');
     }
 
+    // Get the best clarity score from all practice sessions
+    const { data: bestScoreData, error: bestScoreError } = await supabaseAdmin
+      .from('practice_sessions')
+      .select('clarity_score')
+      .eq('user_id', userId)
+      .order('clarity_score', { ascending: false })
+      .limit(1)
+      .single();
+
+    const bestClarityScore = bestScoreError ? roundedClarityScore : Math.max(bestScoreData?.clarity_score || 0, roundedClarityScore);
+
     // Calculate new values (ensure all are integers)
     const totalPracticeTime = Math.round((currentProgress?.total_practice_time || 0) + roundedDuration);
     const totalSessions = Math.round((currentProgress?.total_sessions || 0) + 1);
@@ -239,6 +250,7 @@ export async function updateUserProgress(
       .update({
         practice_frequency: updatedFrequency,
         clarity_score: newAverageClarityScore,
+        best_clarity_score: bestClarityScore, // Add best clarity score
         total_practice_time: totalPracticeTime,
         total_sessions: totalSessions,
         practice_streak: practiceStreak,
@@ -256,7 +268,8 @@ export async function updateUserProgress(
       practiceStreak,
       totalPracticeTime,
       totalSessions,
-      clarityScore: roundedClarityScore,
+      clarityScore: roundedClarityScore, // Use the current session score for badge checks
+      bestClarityScore, // Add best clarity score
       practiceFrequency: updatedFrequency,
       userId,
       createdAt: currentProgress?.created_at || new Date().toISOString(),

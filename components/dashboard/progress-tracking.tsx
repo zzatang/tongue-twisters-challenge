@@ -13,6 +13,7 @@ interface UserProgress {
   total_practice_time: number;
   total_sessions: number;
   clarity_score: number;
+  best_clarity_score: number;
   practice_frequency: {
     daily: { [key: string]: number };
     weekly: { [key: string]: number };
@@ -76,6 +77,7 @@ export function ProgressTracking({ metrics, userId: propUserId, className }: Pro
             total_practice_time: metrics.totalPracticeTime,
             total_sessions: 0,
             clarity_score: metrics.averageClarityScore,
+            best_clarity_score: metrics.averageClarityScore,
             practice_frequency: {
               daily: {},
               weekly: {},
@@ -310,11 +312,18 @@ export function ProgressTracking({ metrics, userId: propUserId, className }: Pro
             <Trophy className="h-6 w-6 text-[hsl(var(--fun-yellow))] animate-float" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-bubblegum flex items-center">
-              <span>{Math.round(progress.clarity_score)}%</span>
-              <span className="ml-2 text-2xl">{getClarityEmoji(progress.clarity_score)}</span>
+            <div className="text-2xl font-bold font-bubblegum flex items-center justify-between">
+              <div>
+                <span className="text-3xl">{Math.round(progress.clarity_score)}%</span>
+                <span className="text-sm ml-1 font-comic text-gray-600">avg</span>
+              </div>
+              <div>
+                <span className="text-3xl">{Math.round(progress.best_clarity_score || progress.clarity_score)}%</span>
+                <span className="text-sm ml-1 font-comic text-gray-600">best</span>
+                <span className="ml-2 text-2xl">{getClarityEmoji(progress.best_clarity_score || progress.clarity_score)}</span>
+              </div>
             </div>
-            <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden mt-2">
               <div 
                 className="h-full rounded-full" 
                 style={{
