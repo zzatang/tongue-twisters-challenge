@@ -206,6 +206,24 @@ export async function updateUserProgress(
       throw fetchError;
     }
 
+    // Record this practice session in the practice_sessions table
+    const { error: sessionError } = await supabaseAdmin
+      .from('practice_sessions')
+      .insert({
+        user_id: userId,
+        tongue_twister_id: tongueId,
+        clarity_score: roundedClarityScore,
+        duration: roundedDuration,
+        created_at: new Date().toISOString()
+      });
+
+    if (sessionError) {
+      console.error('Error recording practice session:', sessionError);
+      // Continue even if there's an error - don't block progress updates
+    } else {
+      console.log('Practice session recorded successfully');
+    }
+
     // Calculate new values (ensure all are integers)
     const totalPracticeTime = Math.round((currentProgress?.total_practice_time || 0) + roundedDuration);
     const totalSessions = Math.round((currentProgress?.total_sessions || 0) + 1);
